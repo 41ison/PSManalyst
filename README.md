@@ -1,4 +1,4 @@
-# PSManalyst
+# PSM Analyst for FragPipe (PSManalyst)
 
 ## Dashboard for PSM and protein information visualization from FragPipe search
 
