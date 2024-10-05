@@ -18,5 +18,5 @@ library(ggtext)           # from CRAN
 ```
 
 <p align = "center">
-<img src = "https://github.com/41ison/PSManalyst/blob/main/Screenshot%20of%20the%20App.png" width = "500">
+<img src = "https://github.com/41ison/PSManalyst/blob/main/Screenshot%20of%20the%20App.png" width = "1000">
 </p>
