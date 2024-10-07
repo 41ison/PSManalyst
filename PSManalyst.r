@@ -11,6 +11,10 @@ library(ggseqlogo)        # from CRAN
 library(ggpointdensity)   # from GitHub
 library(wordcloud2)       # from GitHub
 library(ggtext)           # from CRAN
+library(lsa)              # from CRAN
+library(plotly)           # from CRAN
+library(viridis)          # from CRAN
+library(ggfortify)        # from CRAN
 
 # Increase the maximum file size to 200 MB
 options(shiny.maxRequestSize = 200 * 1024^2)
@@ -113,7 +117,13 @@ ui <- dashboardPage(
               accept = ".tsv"),
       fileInput(inputId = "combined_protein",
               label = "Choose the combined_protein.tsv file",
-              accept = ".tsv")
+              accept = ".tsv"),
+      selectInput("xcol", 
+              "X Sample",
+              choices = NULL),
+      selectInput("ycol",
+              "Y Sample",
+              choices = NULL)
     )
   ),
 
@@ -153,7 +163,14 @@ ui <- dashboardPage(
                   box(title = "Razor spectral count", status = "primary", solidHeader = TRUE, plotOutput("plot23"), collapsible = TRUE),
                   box(title = "Razor intensity", status = "primary", solidHeader = TRUE, plotOutput("plot24"), collapsible = TRUE),
                   box(title = "Top 20 proteins with higher razor intensity", status = "primary", solidHeader = TRUE, plotOutput("plot25"), collapsible = TRUE),
-                  box(title = "MaxLFQ intensity distribution", status = "primary", solidHeader = TRUE, plotOutput("plot26"), collapsible = TRUE)
+                  box(title = "MaxLFQ intensity distribution", status = "primary", solidHeader = TRUE, plotOutput("plot26"), collapsible = TRUE),
+                  box(title = "Sample correlation - Non-normalized log2(Intensity)", status = "primary", height = 600, solidHeader = TRUE, plotlyOutput("plot27"), collapsible = FALSE),
+                tabBox(
+                  title = "Similarity metrics", side = "right", height = 600,
+                  tabPanel("Cosine similarity", plotOutput("cosine_similarity")),
+                  tabPanel("Euclidean distance", plotOutput("euclidean_distance")),
+                  tabPanel("Jaccard similarity", plotOutput("jaccard_similarity"))
+                )
             )
           )
       )
@@ -161,7 +178,7 @@ ui <- dashboardPage(
 )
 
 # Define server logic required to read the psm.tsv file and generate the PICS map report
-server <- function(input, output) {
+server <- function(input, output, session) {
 
 # Information box to display the hyperscore filter
 output$info_box1 <- renderInfoBox({
@@ -559,19 +576,30 @@ frequency_matrix_of_aa <- reactive({
   combined_protein_data <- reactive({
     req(input$combined_protein)
     combined_protein_file <- readr::read_tsv(input$combined_protein$datapath) %>%
-      janitor::clean_names()
+      janitor::clean_names() %>%
+      dplyr::select(protein_id, ends_with("max_lfq_intensity")) %>%
+      dplyr::mutate(sample = str_remove(sample, "_max_lfq_intensity")) %>%
+      column_to_rownames("protein_id") %>%
+      log2()
+  })
+
+  # Observe the uploaded file and update selectInput choices
+  observe({
+    req(combined_protein_data())
+    colnames <- colnames(combined_protein_data())
+    updateSelectInput(session, "xcol", choices = colnames)
+    updateSelectInput(session, "ycol", choices = colnames)
   })
 
   output$plot26 <- renderPlot({
     combined_protein_data() %>%
     as.data.frame() %>%
-    dplyr::select(protein_id, ends_with("max_lfq_intensity")) %>%
+    rownames_to_column(var = "protein_id") %>%
     tidyr::pivot_longer(
       cols = -protein_id,
       names_to = "sample",
       values_to = "maxlfq_intensity"
       ) %>%
-    dplyr::mutate(sample = str_remove(sample, "_max_lfq_intensity")) %>%
     ggplot() +
     geom_violin(aes(x = sample, y = log2(maxlfq_intensity)),
         fill = "dodgerblue4", alpha = 0.7, color = "black") +
@@ -582,6 +610,92 @@ frequency_matrix_of_aa <- reactive({
         y = "Log2(MaxLFQ intensity)") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   })
+
+output$plot27 <- renderPlotly({
+    combined_protein_data() %>%
+    as.data.frame() %>%
+    ggplot(aes(x = !!sym(input$xcol), y = !!sym(input$ycol))) +
+    geom_point(alpha = 0.7, show.legend = FALSE) +
+    geom_smooth(method = "lm", se = FALSE,
+        color = "darkblue") +
+    labs(x = paste0("Log2(", input$xcol, ")"),
+        y = paste0("Log2(", input$ycol, ")"))
+  })
+
+# calculate the cosine similarity in the matrix and plot the heatmap
+output$cosine_similarity <- renderPlot({
+    combined_protein_data() %>%
+    as.matrix() %>%
+    na.omit() %>%
+    lsa::cosine() %>%
+    as.data.frame() %>%
+    rownames_to_column(var = "Sample") %>%
+    pivot_longer(-Sample, names_to = "Match", values_to = "value") %>%
+    dplyr::mutate(Similarity = "Cosine similarity") %>%
+    ggplot() +
+    geom_tile(aes(x = Sample, y = Match, fill = value)) +
+    viridis::scale_fill_viridis(option = "E") +
+    theme(text = element_text(size = 15),
+        axis.text.x = element_text(angle = 90,
+                        hjust = 1, vjust = 0.5),
+        axis.text.y = element_text(angle = 0,
+                        hjust = 1, vjust = 0.5),
+        legend.position = "bottom",
+        legend.key.width = unit(2.5, "cm")) +
+    labs(x = NULL,
+        y = NULL,
+        fill = "Cosine similarity")
+})
+
+# calculate the euclidean distance in the matrix and plot the heatmap
+output$euclidean_distance <- renderPlot({
+    combined_protein_data() %>%
+    t() %>%
+    dist(method = "euclidean") %>%
+    as.matrix() %>%
+    as.data.frame() %>%
+    rownames_to_column(var = "Sample") %>%
+    pivot_longer(-Sample, names_to = "Match", values_to = "value") %>%
+    dplyr::mutate(Similarity = "Euclidean distance") %>%
+    ggplot() +
+    geom_tile(aes(x = Sample, y = Match, fill = value)) +
+    viridis::scale_fill_viridis(option = "E") +
+    theme(text = element_text(size = 15),
+    axis.text.x = element_text(angle = 90,
+                        hjust = 1, vjust = 0.5),
+        axis.text.y = element_text(angle = 0,
+                        hjust = 1, vjust = 0.5),
+        legend.position = "bottom",
+        legend.key.width = unit(2.5, "cm")) +
+    labs(x = NULL,
+        y = NULL,
+        fill = "Euclidean distance")
+        })
+
+# calculate the Jaccard similarity in the matrix and plot the heatmap
+output$jaccard_similarity <- renderPlot({
+    combined_protein_data() %>%
+    t() %>%
+    vegan::vegdist(method = "jaccard", na.rm = TRUE) %>%
+    as.matrix() %>%
+    as.data.frame(as.table(.)) %>% 
+    dplyr::mutate(Sample = colnames(.)) %>%
+    pivot_longer(-Sample, names_to = "Match", values_to = "value") %>%
+    dplyr::mutate(Similarity = "Jaccard similarity") %>%
+    ggplot() +
+    geom_tile(aes(x = Sample, y = Match, fill = value)) +
+    viridis::scale_fill_viridis(option = "E") +
+    theme(text = element_text(size = 15),
+    axis.text.x = element_text(angle = 90,
+                        hjust = 1, vjust = 0.5),
+        axis.text.y = element_text(angle = 0,
+                        hjust = 1, vjust = 0.5),
+        legend.position = "bottom",
+        legend.key.width = unit(2.5, "cm")) +
+    labs(x = NULL,
+        y = NULL,
+        fill = "Jaccard similarity")
+})
 
 }
 
