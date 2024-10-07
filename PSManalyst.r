@@ -578,8 +578,8 @@ frequency_matrix_of_aa <- reactive({
     combined_protein_file <- readr::read_tsv(input$combined_protein$datapath) %>%
       janitor::clean_names() %>%
       dplyr::select(protein_id, ends_with("max_lfq_intensity")) %>%
-      dplyr::mutate(sample = str_remove(sample, "_max_lfq_intensity")) %>%
       column_to_rownames("protein_id") %>%
+      dplyr::rename_all(~str_remove(., "max_lfq_intensity_")) %>%
       log2()
   })
 
