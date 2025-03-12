@@ -16,8 +16,8 @@ library(plotly)           # from CRAN
 library(viridis)          # from CRAN
 library(ggfortify)        # from CRAN
 
-# Increase the maximum file size to 200 MB
-options(shiny.maxRequestSize = 200 * 1024^2)
+# Increase the maximum file size to 1000 MB
+options(shiny.maxRequestSize = 1000 * 1024^2)
 
 # set the general theme for the plots
 theme_set(theme_bw())
@@ -204,7 +204,8 @@ output$info_box1 <- renderInfoBox({
         fingerprint_Nterm = str_extract(fingerprint_Nterm, ".{4}\\..{4}"),
         fingerprint_Nterm = str_remove_all(fingerprint_Nterm, "\\."),
         fingerprint_Cterm = str_extract(fingerprint_Cterm, ".{4}\\..{4}"),
-        fingerprint_Cterm = str_remove_all(fingerprint_Cterm, "\\.")
+        fingerprint_Cterm = str_remove_all(fingerprint_Cterm, "\\."),
+        delta_mass_ppm = (observed_m_z-calculated_m_z)/calculated_m_z*1e6
         ) %>%
       dplyr::relocate(extended_peptide, .before = fingerprint_Nterm)
   })
@@ -346,7 +347,6 @@ frequency_matrix_of_aa <- reactive({
  output$plot8 <- renderPlot({
     data() %>%
     as.data.frame() %>%
-    dplyr::mutate(delta_mass_ppm = (observed_m_z-calculated_m_z)/calculated_m_z*1e6) %>% 
       dplyr::filter(abs(delta_mass_ppm) < 100) %>% 
       ggplot(aes(x = retention/60,
                  y = delta_mass_ppm)
@@ -355,7 +355,8 @@ frequency_matrix_of_aa <- reactive({
       geom_hline(yintercept = c(10, 0, -10), color = "red", linetype = "dashed", linewidth = 0.2) +
       labs(title = "Mass error in ppm",
            x = "Retention time (min)",
-           y = "Mass error (ppm)")
+           y = "Mass error (ppm)",
+          caption = "ppm error is calculated as ∆m/z over theoretical m/z * 1e6")
   })
 
   output$plot9 <- renderPlot({
