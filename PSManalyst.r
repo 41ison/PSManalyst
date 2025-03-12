@@ -139,7 +139,7 @@ ui <- dashboardPage(
                   box(title = "Charge state distribution", status = "primary", solidHeader = TRUE, plotOutput("plot5"), collapsible = TRUE),
                   box(title = "m/z over retention time", status = "primary", solidHeader = TRUE, plotOutput("plot6"), collapsible = TRUE),
                   box(title = "Number of missed cleavages", status = "primary", solidHeader = TRUE, plotOutput("plot7"), collapsible = TRUE),
-                  box(title = "Number of enzymatic termini", status = "primary", solidHeader = TRUE, plotOutput("plot8"), collapsible = TRUE),
+                  box(title = "Mass error (ppm)", status = "primary", solidHeader = TRUE, plotOutput("plot8"), collapsible = TRUE),
                   box(title = "Hyperscore distribution", status = "primary", solidHeader = TRUE, plotOutput("plot9"), collapsible = TRUE),
                   box(title = "Next Score distribution", status = "primary", solidHeader = TRUE, plotOutput("plot10"), collapsible = TRUE),
                   box(title = "PeptideProphet probability", status = "primary", solidHeader = TRUE, plotOutput("plot11"), collapsible = TRUE),
@@ -343,15 +343,19 @@ frequency_matrix_of_aa <- reactive({
         caption = "Number of potential enzymatic cleavage sites within the identified sequence")
   })
 
-  output$plot8 <- renderPlot({
+ output$plot8 <- renderPlot({
     data() %>%
     as.data.frame() %>%
-    ggplot() +
-    geom_bar(aes(x = number_of_enzymatic_termini), stat = "count",
-        fill = "dodgerblue4", alpha = 0.7, color = "black") +
-    labs(x = "Number of Enzymatic Termini",
-        y = "Count",
-        caption = "2 = fully-enzymatic, 1 = semi-enzymatic, 0 = non-enzymatic")
+    dplyr::mutate(delta_mass_ppm = (observed_m_z-calculated_m_z)/calculated_m_z*1e6) %>% 
+      dplyr::filter(abs(delta_mass_ppm) < 100) %>% 
+      ggplot(aes(x = retention/60,
+                 y = delta_mass_ppm)
+      ) +
+      geom_point(alpha = 0.1, color = "black", size = 1) +
+      geom_hline(yintercept = c(10, 0, -10), color = "red", linetype = "dashed", linewidth = 0.2) +
+      labs(title = "Mass error in ppm",
+           x = "Retention time (min)",
+           y = "Mass error (ppm)")
   })
 
   output$plot9 <- renderPlot({
