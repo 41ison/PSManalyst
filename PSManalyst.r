@@ -2,6 +2,15 @@
 ## The files psm.tsv and protein.tsv are the inputs for the viewwer
 ## It is possible to filter the PSMs by the hyperscore
 
+# Check if the required R libraries are installed and install them if necessary.
+CRAN_packages ＜- c("shiny", "shinydashboard", "tidyverse", "janitor", "ggseqlogo", "ggtext", "lsa", "plotly", "viridis", "ggfortify")
+not_installed_CRAN ＜- CRAN_packages[!(CRAN_packages %in% installed.packages()[ , "Package"])]
+if(length(not_installed_CRAN)) install.packages(not_installed_CRAN)
+
+GitHub_packages ＜- c("ggpointdensity", "wordcloud2")
+not_installed_GitHub ＜- GitHub_packages[!(GitHub_packages %in% installed.packages()[ , "Package"])]
+if(length(not_installed_GitHub)) install.packages(not_installed_GitHub)
+
 # Load required libraries
 library(shiny)            # from CRAN
 library(shinydashboard)   # from CRAN
