@@ -196,7 +196,7 @@ server <- function(input, output, session) {
 # Information box to display the hyperscore filter
 output$info_box1 <- renderInfoBox({
     infoBox("Filter the PSMs by hyperscore and PeptideProphet probability to select the best matches",
-            paste("Showing PSMs with Hyperscore ≥ ", input$hyperscore "and PeptideProphet probability ≥", input$Probability),
+            paste("Showing PSMs with Hyperscore ≥ ", input$hyperscore),
             icon = icon("info"),
             color = "black"
     )
@@ -207,7 +207,7 @@ output$info_box1 <- renderInfoBox({
     req(input$psm)
     psm_file <- readr::read_tsv(input$psm$datapath) %>%
       janitor::clean_names() %>%
-      dplyr::filter(.$hyperscore >= input$hyperscore & .$Probability >= input$Probability) %>%
+      dplyr::filter(.$hyperscore >= input$hyperscore) %>%
       dplyr::mutate(
         fingerprint_Nterm = case_when(
             str_detect(extended_peptide, "^\\.") ~ "NA",
