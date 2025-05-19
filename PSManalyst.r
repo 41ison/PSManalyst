@@ -3,12 +3,12 @@
 ## It is possible to filter the PSMs by the hyperscore
 
 # Check if the required R libraries are installed and install them if necessary.
-CRAN_packages ＜- c("shiny", "shinydashboard", "tidyverse", "janitor", "ggseqlogo", "ggtext", "lsa", "plotly", "viridis", "ggfortify")
-not_installed_CRAN ＜- CRAN_packages[!(CRAN_packages %in% installed.packages()[ , "Package"])]
+CRAN_packages <- c("shiny", "shinydashboard", "tidyverse", "janitor", "ggseqlogo", "ggtext", "lsa", "plotly", "viridis", "ggfortify")
+not_installed_CRAN <- CRAN_packages[!(CRAN_packages %in% installed.packages()[ , "Package"])]
 if(length(not_installed_CRAN)) install.packages(not_installed_CRAN)
 
-GitHub_packages ＜- c("ggpointdensity", "wordcloud2")
-not_installed_GitHub ＜- GitHub_packages[!(GitHub_packages %in% installed.packages()[ , "Package"])]
+GitHub_packages <- c("ggpointdensity", "wordcloud2")
+not_installed_GitHub <- GitHub_packages[!(GitHub_packages %in% installed.packages()[ , "Package"])]
 if(length(not_installed_GitHub)) install.packages(not_installed_GitHub)
 
 # Load required libraries
@@ -117,6 +117,10 @@ ui <- dashboardPage(
               label = "PSM hyperscore filter",
               min = 0, max = 1000,
               value = 20, step = 10),
+      sliderInput("Probability",
+                    label = "PeptideProphet Probability",
+                    min = 0, max = 1,
+                    value = 0.9, step = 5),
       menuItem("Protein viewer",
               tabName = "protein",
               icon = icon("equalizer",
@@ -191,8 +195,8 @@ server <- function(input, output, session) {
 
 # Information box to display the hyperscore filter
 output$info_box1 <- renderInfoBox({
-    infoBox("Filter the PSMs by hyperscore to select the best matches",
-            paste("Showing PSMs with Hyperscore ≥ ", input$hyperscore),
+    infoBox("Filter the PSMs by hyperscore and PeptideProphet probability to select the best matches",
+            paste("Showing PSMs with Hyperscore ≥ ", input$hyperscore "and PeptideProphet probability ≥", input$Probability),
             icon = icon("info"),
             color = "black"
     )
@@ -203,7 +207,7 @@ output$info_box1 <- renderInfoBox({
     req(input$psm)
     psm_file <- readr::read_tsv(input$psm$datapath) %>%
       janitor::clean_names() %>%
-      dplyr::filter(.$hyperscore >= input$hyperscore) %>%
+      dplyr::filter(.$hyperscore >= input$hyperscore & .$Probability >= input$Probability) %>%
       dplyr::mutate(
         fingerprint_Nterm = case_when(
             str_detect(extended_peptide, "^\\.") ~ "NA",
