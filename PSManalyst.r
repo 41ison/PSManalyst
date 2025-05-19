@@ -117,10 +117,10 @@ ui <- dashboardPage(
               label = "PSM hyperscore filter",
               min = 0, max = 1000,
               value = 20, step = 10),
-      sliderInput("Probability",
+      sliderInput("probability",
                     label = "PeptideProphet Probability",
                     min = 0, max = 1,
-                    value = 0.9, step = 5),
+                    value = 0.9, step = 0.1),
       menuItem("Protein viewer",
               tabName = "protein",
               icon = icon("equalizer",
@@ -197,6 +197,7 @@ server <- function(input, output, session) {
 output$info_box1 <- renderInfoBox({
     infoBox("Filter the PSMs by hyperscore and PeptideProphet probability to select the best matches",
             paste("Showing PSMs with Hyperscore ≥ ", input$hyperscore),
+            paste("Showing PSMs with PeptideProphet probability ≥ ", input$probability),
             icon = icon("info"),
             color = "black"
     )
@@ -207,7 +208,7 @@ output$info_box1 <- renderInfoBox({
     req(input$psm)
     psm_file <- readr::read_tsv(input$psm$datapath) %>%
       janitor::clean_names() %>%
-      dplyr::filter(.$hyperscore >= input$hyperscore) %>%
+      dplyr::filter(.$hyperscore >= input$hyperscore & .$probability >= input$probability) %>%
       dplyr::mutate(
         fingerprint_Nterm = case_when(
             str_detect(extended_peptide, "^\\.") ~ "NA",
