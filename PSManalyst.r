@@ -285,8 +285,10 @@ frequency_matrix_of_aa <- reactive({
   ) +
   geom_hline(yintercept = 0, 
         color = "black", linetype = "dashed") +
-    geom_vline(xintercept = 4.5, 
+  geom_vline(xintercept = 4.5, 
         color = "black", linetype = "dashed") +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8),
+                     labels = c("1" = "P4", "2" = "P3", "3" = "P2", "4" = "P1", "5" = "P1'", "6" = "P2'", "7" =  "P3'", "8" = "P4'")) +
   theme_bw() +
   theme(plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
     text = element_text(size = 15, color = "black"),
@@ -310,8 +312,10 @@ frequency_matrix_of_aa <- reactive({
   ) +
   geom_hline(yintercept = 0, 
         color = "black", linetype = "dashed") +
-    geom_vline(xintercept = 4.5, 
+  geom_vline(xintercept = 4.5, 
         color = "black", linetype = "dashed") +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8),
+                     labels = c("1" = "P4", "2" = "P3", "3" = "P2", "4" = "P1", "5" = "P1'", "6" = "P2'", "7" =  "P3'", "8" = "P4'")) +
   theme_bw() +
   theme(plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
     text = element_text(size = 15, color = "black"),
@@ -350,12 +354,14 @@ frequency_matrix_of_aa <- reactive({
   output$plot7 <- renderPlot({
     data() %>%
     as.data.frame() %>%
-    ggplot() +
-    geom_bar(aes(x = number_of_missed_cleavages), 
+    dplyr::count(number_of_missed_cleavages) %>%
+    dplyr::mutate(number_of_missed_cleavages = factor(number_of_missed_cleavages)) %>%
+    ggplot(aes(x = number_of_missed_cleavages, y = n)) +
+    geom_bar(stat = "identity", position = "dodge", show.legend = FALSE, 
         fill = "dodgerblue4", alpha = 0.7, color = "black") +
+    geom_text(aes(label = n), vjust = -0.5, size = 5) +
     labs(x = "Number of Missed Cleavages",
-        y = "Count",
-        caption = "Number of potential enzymatic cleavage sites within the identified sequence")
+        y = "Count")
   })
 
  output$plot8 <- renderPlot({
@@ -516,12 +522,17 @@ frequency_matrix_of_aa <- reactive({
      dplyr::mutate(
       protein_existence = str_remove(protein_existence, ".*\\:"),
       protein_existence = factor(protein_existence,
-        levels = c("Experimental evidence at protein level", "Experimental evidence at transcript level", "Protein inferred from homology", "Protein predicted"))
+        levels = c("Experimental evidence at protein level", 
+                   "Experimental evidence at transcript level", 
+                   "Protein inferred from homology", 
+                   "Protein predicted"))
       ) %>%
     ggplot() +
     geom_bar(aes(y = protein_existence),
         fill = "dodgerblue4", alpha = 0.7, color = "black") +
-    geom_text(aes(y = protein_existence, label = ..count..), stat = "count", vjust = -0.5, size = 5) +
+    geom_text(aes(y = protein_existence, 
+                  label = ..count..), 
+              stat = "count", vjust = -0.5, size = 5) +
     labs(y = NULL,
         x = "Count")
   })
