@@ -89,6 +89,8 @@ extract_matrix <- function(data) {
   return(final_matrix)
 }
 
+color_blue_seq <- c("#d4e6f1", "#a9cce3", "#7fb3d5", "#5499c7", "#2980b9", "#1f618d", "#154360")
+
 # Define UI for application that reads a psm.tsv file and generates a PICS map report dashboard
 ui <- dashboardPage(
 
@@ -243,7 +245,8 @@ frequency_matrix_of_aa <- reactive({
         ) %>%
     ggplot(aes(x = position, y = residue, fill = frequency)) +
     geom_tile(color = "black") +
-    scale_fill_gradient(low = "grey90", high = "dodgerblue4") +
+    scale_fill_gradient(low = "#d4e6f1", high = "#154360") +
+    geom_vline(xintercept = 4.5, color = "black", linetype = "dashed") +
     theme_void() +
     labs(
         title = "Cleavage Site Specificity",
@@ -258,6 +261,7 @@ frequency_matrix_of_aa <- reactive({
         plot.title = element_text(hjust = 0.5),
         legend.position = "bottom",
         legend.key.width = unit(1.5, "cm"),
+        legend.key.height = unit(0.25, "cm"),
         legend.title.position = "top")
   })
 
@@ -471,7 +475,7 @@ frequency_matrix_of_aa <- reactive({
     data() %>%
     as.data.frame() %>%
     dplyr::count(peptide) %>%
-    wordcloud2::wordcloud2(color = "random-dark",
+    wordcloud2::wordcloud2(color = rep_len(color_blue_seq, nrow(.)),
         backgroundColor = "white",
         size = 1,
         shuffle = TRUE)
