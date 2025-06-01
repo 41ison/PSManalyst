@@ -118,11 +118,11 @@ ui <- dashboardPage(
       sliderInput("hyperscore",
               label = "PSM hyperscore filter",
               min = 0, max = 1000,
-              value = 20, step = 10),
+              value = 15, step = 5),
       sliderInput("probability",
                     label = "PeptideProphet Probability",
                     min = 0, max = 1,
-                    value = 0.9, step = 0.1),
+                    value = 0.95, step = 0.05),
       menuItem("Protein viewer",
               tabName = "protein",
               icon = icon("equalizer",
@@ -148,21 +148,21 @@ ui <- dashboardPage(
               fluidRow(
                   infoBoxOutput("info_box1", width = 12),
                   box(title = "Protease fingerprint", status = "primary", solidHeader = TRUE, plotOutput("plot1"), collapsible = TRUE),
-                  box(title = "Peptide length", status = "primary", solidHeader = TRUE, plotOutput("plot2"), collapsible = TRUE),
+                  box(title = "Word cloud of peptide sequences", status = "primary", solidHeader = TRUE, wordcloud2Output("plot16"), collapsible = TRUE),
                   box(title = "N-termini SeqLogo", status = "primary", solidHeader = TRUE, plotOutput("plot3"), collapsible = TRUE),
                   box(title = "C-termini SeqLogo", status = "primary", solidHeader = TRUE, plotOutput("plot4"), collapsible = TRUE),
-                  box(title = "Charge state distribution", status = "primary", solidHeader = TRUE, plotOutput("plot5"), collapsible = TRUE),
                   box(title = "m/z over retention time", status = "primary", solidHeader = TRUE, plotOutput("plot6"), collapsible = TRUE),
-                  box(title = "Number of missed cleavages", status = "primary", solidHeader = TRUE, plotOutput("plot7"), collapsible = TRUE),
                   box(title = "Mass error (ppm)", status = "primary", solidHeader = TRUE, plotOutput("plot8"), collapsible = TRUE),
+                  box(title = "Peptide length", status = "primary", solidHeader = TRUE, plotOutput("plot2"), collapsible = TRUE),
+                  box(title = "Charge state distribution", status = "primary", solidHeader = TRUE, plotOutput("plot5"), collapsible = TRUE),
+                  box(title = "Number of missed cleavages", status = "primary", solidHeader = TRUE, plotOutput("plot7"), collapsible = TRUE),
+                  box(title = "Uniqueness", status = "primary", solidHeader = TRUE, plotOutput("plot14"), collapsible = TRUE),
                   box(title = "Hyperscore distribution", status = "primary", solidHeader = TRUE, plotOutput("plot9"), collapsible = TRUE),
                   box(title = "Next Score distribution", status = "primary", solidHeader = TRUE, plotOutput("plot10"), collapsible = TRUE),
                   box(title = "PeptideProphet probability", status = "primary", solidHeader = TRUE, plotOutput("plot11"), collapsible = TRUE),
                   box(title = "Expectation (PeptideProphet)", status = "primary", solidHeader = TRUE, plotOutput("plot12"), collapsible = TRUE),
                   box(title = "Purity (Philosopher Freequant)", status = "primary", solidHeader = TRUE, plotOutput("plot13"), collapsible = TRUE),
-                  box(title = "Uniqueness", status = "primary", solidHeader = TRUE, plotOutput("plot14"), collapsible = TRUE),
-                  box(title = "Top 20 proteins with more PSMs", status = "primary", solidHeader = TRUE, plotOutput("plot15"), collapsible = TRUE),
-                  box(title = "Word cloud of peptide sequences", status = "primary", solidHeader = TRUE, wordcloud2Output("plot16"), collapsible = TRUE)
+                  box(title = "Top 20 proteins with more PSMs", status = "primary", solidHeader = TRUE, plotOutput("plot15"), collapsible = TRUE)
       )
     ),
 
@@ -641,7 +641,7 @@ frequency_matrix_of_aa <- reactive({
         fill = "white", alpha = 0.7, outliers = FALSE,
         color = "black", width = 0.1, show.legend = FALSE) +
     labs(x = NULL,
-        y = "Log2(MaxLFQ intensity)") +
+        y = "log2(MaxLFQ intensity)") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   })
 
@@ -652,8 +652,8 @@ output$plot27 <- renderPlotly({
     geom_point(alpha = 0.7, show.legend = FALSE) +
     geom_smooth(method = "lm", se = FALSE,
         color = "darkblue") +
-    labs(x = paste0("Log2(", input$xcol, ")"),
-        y = paste0("Log2(", input$ycol, ")"))
+    labs(x = paste0("log2(", input$xcol, ")"),
+        y = paste0("log2(", input$ycol, ")"))
   })
 
 # calculate the cosine similarity in the matrix and plot the heatmap
@@ -734,4 +734,4 @@ output$jaccard_similarity <- renderPlot({
 }
 
 # Run the application
-shinyApp(ui = ui, server = server)
+shinyApp(ui, server)
