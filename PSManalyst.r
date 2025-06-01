@@ -124,6 +124,13 @@ ui <- dashboardPage(
                     label = "PeptideProphet Probability",
                     min = 0, max = 1,
                     value = 0.95, step = 0.05),
+      textInput("protein_pettern",
+                label = "Remove an organism by entry name",
+                value = "",
+                placeholder = "HUMAN"),
+      checkboxInput("case_sensitive",
+                label = "Case sensitive",
+                value = FALSE),
       menuItem("Protein viewer",
               tabName = "protein",
               icon = icon("equalizer",
@@ -198,9 +205,21 @@ server <- function(input, output, session) {
 
 # Information box to display the hyperscore filter
 output$info_box1 <- renderInfoBox({
-    infoBox("Filter the PSMs by hyperscore and PeptideProphet probability to select the best matches",
-            paste("Showing PSMs with Hyperscore ≥ ", input$hyperscore),
-            paste("Showing PSMs with PeptideProphet probability ≥ ", input$probability),
+  filter_text <- paste("Showing PSMs with Hyperscore ≥", input$hyperscore,
+                       "and PeptideProphet probability ≥", input$probability)
+  
+  if (!is.null(input$protein_pattern) && input$protein_pattern != "") {
+    pattern_text <- if(inpt$case_sensitive) {
+      paste("and organism entry name matching:", input$protein_pattern, "(case sensitive)")
+    }
+    else {
+      paste("and organism entry name matching:", input$protein_pattern, "(case insensitive)")
+    }
+    filter_text <- paste(filter_text, pattern_text)
+  }
+    
+    infoBox("Filter settings",
+            filter_text,
             icon = icon("info"),
             color = "black"
     )
@@ -209,9 +228,22 @@ output$info_box1 <- renderInfoBox({
   # Import and pre-process the uploaded psm.tsv file
   data <- reactive({
     req(input$psm)
+  # Read the psm.tsv file and filter based on hyperscore and PeptideProphet probability
     psm_file <- readr::read_tsv(input$psm$datapath) %>%
       janitor::clean_names() %>%
-      dplyr::filter(.$hyperscore >= input$hyperscore & .$probability >= input$probability) %>%
+      dplyr::filter(.$hyperscore >= input$hyperscore & .$probability >= input$probability) 
+  # Filter by organism entry name if provided
+    if (input$protein_pettern != "") {
+      if (input$case_sensitive) {
+        psm_file <- psm_file %>%
+          dplyr::filter(str_detect(entry_name, input$protein_pettern, negate = TRUE))
+      } else {
+        psm_file <- psm_file %>%
+          dplyr::filter(str_detect(tolower(entry_name), tolower(input$protein_pettern), negate = TRUE))
+      }
+    }
+      
+    psm_file <- psm_file %>%
       dplyr::mutate(
         fingerprint_Nterm = case_when(
             str_detect(extended_peptide, "^\\.") ~ "NA",
@@ -271,7 +303,7 @@ frequency_matrix_of_aa <- reactive({
     as.data.frame() %>%
     ggplot() +
     geom_density(aes(x = peptide_length),
-        fill = "dodgerblue4", alpha = 0.7) +
+        fill = "#5499c7") +
     labs(x = "Peptide Length",
         y = "Frequency (%)") +
     theme(text = element_text(size = 15, color = "black"),
@@ -338,7 +370,7 @@ frequency_matrix_of_aa <- reactive({
     as.data.frame() %>%
     ggplot() +
     geom_bar(aes(x = charge), 
-      fill = "dodgerblue4", alpha = 0.7, color = "black") +
+      fill = "#5499c7", color = "black") +
     labs(x = "Charge state",
         y = "Count")
   })
@@ -350,7 +382,8 @@ frequency_matrix_of_aa <- reactive({
     ggpointdensity::geom_pointdensity(size = 0.25) +
     viridis::scale_color_viridis(option = "plasma") +
     labs(x = "Retention time (min)",
-        y = "Scan range (m/z)") +
+        y = "Scan range (m/z)",
+        color = "Number of Neighborhoods") +
     theme(
     legend.position = "bottom",
         legend.key.width = unit(1.5, "cm"),
@@ -365,7 +398,7 @@ frequency_matrix_of_aa <- reactive({
     dplyr::mutate(number_of_missed_cleavages = factor(number_of_missed_cleavages)) %>%
     ggplot(aes(x = number_of_missed_cleavages, y = n)) +
     geom_bar(stat = "identity", position = "dodge", show.legend = FALSE, 
-        fill = "dodgerblue4", alpha = 0.7, color = "black") +
+        fill = "#5499c7", color = "black") +
     geom_text(aes(label = n), vjust = -0.5, size = 5) +
     labs(x = "Number of Missed Cleavages",
         y = "Count")
@@ -391,7 +424,7 @@ frequency_matrix_of_aa <- reactive({
     as.data.frame() %>%
     ggplot() +
     geom_histogram(aes(x = hyperscore), 
-        fill = "dodgerblue4", alpha = 0.7, color = "black") +
+        fill = "#5499c7", color = "black") +
     labs(x = "Hyperscore",
         y = "Count",
         caption = "Similarity score between observed and theoretical spectra, higher values indicate greater similarity")
@@ -402,7 +435,7 @@ frequency_matrix_of_aa <- reactive({
     as.data.frame() %>%
     ggplot() +
     geom_histogram(aes(x = nextscore), 
-        fill = "dodgerblue4", alpha = 0.7, color = "black") +
+        fill = "#5499c7", color = "black") +
     labs(x = "Nextscore",
         y = "Count",
         caption = "Similarity score (hyperscore) of the second-highest scoring match for the spectrum")
@@ -413,7 +446,7 @@ frequency_matrix_of_aa <- reactive({
     as.data.frame() %>%
     ggplot() +
     geom_histogram(aes(x = probability), 
-        fill = "dodgerblue4", alpha = 0.7, color = "black") +
+        fill = "#5499c7", color = "black") +
     labs(x = "PeptideProphet Probability",
         y = "Count",
         caption = "Confidence score determined by PeptideProphet, higher values indicate greater confidence")
@@ -424,7 +457,7 @@ frequency_matrix_of_aa <- reactive({
     as.data.frame() %>%
     ggplot() +
     geom_histogram(aes(x = expectation), 
-        fill = "dodgerblue4", alpha = 0.7, color = "black") +
+        fill = "#5499c7", color = "black") +
     labs(x = "Expectation value",
         y = "Count",
         caption = "Expectation value from statistical modeling with PeptideProphet, lower values indicate higher likelihood")
@@ -440,11 +473,11 @@ frequency_matrix_of_aa <- reactive({
                                                     assigned_modifications)) %>%
     dplyr::count(assigned_modifications) %>%
     ggplot(aes(y = assigned_modifications, x = n)) +
-      geom_col(fill = "dodgerblue4", alpha = 0.7, color = "black") +
+      geom_col(fill = "#5499c7", color = "black") +
       geom_text(aes(label = n), hjust = -0.1, size = 5) +
       labs(y = "Assigned Modifications",
            x = "Count",
-           caption = "Number of modifications assigned to the peptide sequence")
+           caption = "Number of modifications assigned to the peptide sequences")
   })
 
   output$plot14 <- renderPlot({
@@ -457,7 +490,7 @@ frequency_matrix_of_aa <- reactive({
     )) %>%
     ggplot(aes(x = uniqueness, y = n)) +
     geom_bar(stat = "identity", position = "dodge", show.legend = FALSE, 
-        fill = "dodgerblue4", alpha = 0.7, color = "black") +
+        fill = "#5499c7", color = "black") +
     geom_text(aes(label = n), vjust = -0.5, size = 5) +
     labs(x = "Unique peptides",
         y = "Count")
@@ -475,7 +508,7 @@ frequency_matrix_of_aa <- reactive({
     head(20) %>%
     ggplot() +
     geom_bar(aes(x = n_psm, y = reorder(entry_name, n_psm)), 
-        fill = "dodgerblue4", alpha = 0.7, color = "black", stat = "identity") +
+        fill = "#5499c7", color = "black", stat = "identity") +
     labs(x = "Number of PSMs",
         y = "Protein")
   })
@@ -491,7 +524,8 @@ frequency_matrix_of_aa <- reactive({
         size = 1,
         shuffle = TRUE,
         minRotation = -pi/6,
-        maxRotation = pi/6)
+        maxRotation = pi/6,
+        widgetsize = "100%")
   })
 
 # Import and pre-process the uploaded protein.tsv file
@@ -515,7 +549,7 @@ frequency_matrix_of_aa <- reactive({
     as.data.frame() %>%
     ggplot() +
     geom_histogram(aes(x = coverage), 
-        fill = "dodgerblue4", alpha = 0.7, color = "black") +
+        fill = "#5499c7", color = "black") +
     labs(x = "Protein coverage (%)",
         y = "Count")
   })
@@ -526,8 +560,8 @@ frequency_matrix_of_aa <- reactive({
     dplyr::count(organism) %>%
     ggplot() +
     geom_bar(aes(x = n, y = reorder(organism, n)),
-        fill = "dodgerblue4", alpha = 0.7, color = "black", stat = "identity") +
-    geom_text(aes(x = n, y = reorder(organism, n), label = n), vjust = -0.5, size = 5) +
+        fill = "#5499c7", color = "black", stat = "identity") +
+    geom_text(aes(x = n, y = reorder(organism, n), label = n), hjust = -0.1, size = 5) +
     labs(x = "Number of proteins",
         y = NULL) +
     theme(axis.text.y = element_text(face = "italic"))
@@ -545,13 +579,16 @@ frequency_matrix_of_aa <- reactive({
                    "Protein predicted"))
       ) %>%
     ggplot() +
-    geom_bar(aes(y = protein_existence),
-        fill = "dodgerblue4", alpha = 0.7, color = "black") +
+    geom_bar(aes(y = protein_existence,
+                 fill = protein_existence),
+        color = "black", show.legend = FALSE) +
+    scale_fill_manual(values = c("#5499c7", "#7fb3d5", "#a9cce3", "#d4e6f1")) +
     geom_text(aes(y = protein_existence, 
-                  label = ..count..), 
-              stat = "count", vjust = -0.5, size = 5) +
+                  label = ..count..), show.legend = FALSE,
+              stat = "count", vjust = -0.5, size = 7, fontface = "bold") +
     labs(y = NULL,
-        x = "Count")
+        x = "Count",
+        fill = NULL)
   })
 
   output$plot20 <- renderPlot({
@@ -559,7 +596,7 @@ frequency_matrix_of_aa <- reactive({
     as.data.frame() %>%
     ggplot() +
     geom_histogram(aes(x = protein_probability),
-        fill = "dodgerblue4", alpha = 0.7, color = "black") +
+        fill = "#5499c7", color = "black") +
     labs(x = "Protein Probability",
         y = "Count")
   })
@@ -569,7 +606,7 @@ frequency_matrix_of_aa <- reactive({
     as.data.frame() %>%
     ggplot() +
     geom_histogram(aes(x = top_peptide_probability),
-        fill = "dodgerblue4", alpha = 0.7, color = "black") +
+        fill = "#5499c7", color = "black") +
     labs(x = "Peptide Probability",
         y = "Count",
         caption = "Best peptide probability of supporting peptides")
@@ -580,7 +617,7 @@ frequency_matrix_of_aa <- reactive({
     as.data.frame() %>%
     ggplot() +
     geom_histogram(aes(x = total_peptides),
-        fill = "dodgerblue4", alpha = 0.7, color = "black") +
+        fill = "#5499c7", color = "black") +
     labs(x = "Total peptides mapped to proteins",
         y = "Count")
   })
@@ -590,7 +627,7 @@ frequency_matrix_of_aa <- reactive({
     as.data.frame() %>%
     ggplot() +
     geom_histogram(aes(x = razor_spectral_count),
-        fill = "dodgerblue4", alpha = 0.7, color = "black") +
+        fill = "#5499c7", color = "black") +
     labs(x = "Razor Spectral Count",
         y = "Count",
         caption = "Number of PSMs corresponding to the razor peptides")
@@ -601,7 +638,7 @@ frequency_matrix_of_aa <- reactive({
     as.data.frame() %>%
     ggplot() +
     geom_histogram(aes(x = razor_intensity),
-        fill = "dodgerblue4", alpha = 0.7, color = "black") +
+        fill = "#5499c7", color = "black") +
     labs(x = "Razor Intensity",
         y = "Count",
         caption = "Protein intensity calculated using the unique peptides (from the top-N algorithm)")
@@ -614,7 +651,7 @@ frequency_matrix_of_aa <- reactive({
     head(20) %>%
     ggplot() +
     geom_bar(aes(x = log2(razor_intensity), y = reorder(entry_name, razor_intensity)),
-        fill = "dodgerblue4", alpha = 0.7, color = "black", stat = "identity") +
+        fill = "#5499c7", color = "black", stat = "identity") +
     labs(x = "log2 of Razor Intensity",
         y = "Protein")
   })
@@ -626,7 +663,7 @@ frequency_matrix_of_aa <- reactive({
       janitor::clean_names() %>%
       dplyr::select(protein_id, ends_with("max_lfq_intensity")) %>%
       column_to_rownames("protein_id") %>%
-      dplyr::rename_all(~str_remove(., "max_lfq_intensity_")) %>%
+      dplyr::rename_all(~str_remove(., "_max_lfq_intensity")) %>%
       log2()
   })
 
@@ -648,10 +685,10 @@ frequency_matrix_of_aa <- reactive({
       values_to = "maxlfq_intensity"
       ) %>%
     ggplot() +
-    geom_violin(aes(x = sample, y = log2(maxlfq_intensity)),
-        fill = "dodgerblue4", alpha = 0.7, color = "black") +
-    geom_boxplot(aes(x = sample, y = log2(maxlfq_intensity)),
-        fill = "white", alpha = 0.7, outliers = FALSE,
+    geom_violin(aes(x = sample, y = maxlfq_intensity),
+        fill = "#5499c7", alpha = 0.7, color = "black") +
+    geom_boxplot(aes(x = sample, y = maxlfq_intensity),
+        fill = "white", outliers = FALSE,
         color = "black", width = 0.1, show.legend = FALSE) +
     labs(x = NULL,
         y = "log2(MaxLFQ intensity)") +
@@ -664,7 +701,7 @@ output$plot27 <- renderPlotly({
     ggplot(aes(x = !!sym(input$xcol), y = !!sym(input$ycol))) +
     geom_point(alpha = 0.7, show.legend = FALSE) +
     geom_smooth(method = "lm", se = FALSE,
-        color = "darkblue") +
+        color = "#5499c7") +
     labs(x = paste0("log2(", input$xcol, ")"),
         y = paste0("log2(", input$ycol, ")"))
   })
@@ -688,7 +725,9 @@ output$cosine_similarity <- renderPlot({
         axis.text.y = element_text(angle = 0,
                         hjust = 1, vjust = 0.5),
         legend.position = "bottom",
-        legend.key.width = unit(2.5, "cm")) +
+        legend.key.width = unit(2.5, "cm"),
+        legend.key.height = unit(0.25, "cm")
+         ) +
     labs(x = NULL,
         y = NULL,
         fill = "Cosine similarity")
@@ -713,7 +752,8 @@ output$euclidean_distance <- renderPlot({
         axis.text.y = element_text(angle = 0,
                         hjust = 1, vjust = 0.5),
         legend.position = "bottom",
-        legend.key.width = unit(2.5, "cm")) +
+        legend.key.width = unit(2.5, "cm"),
+        legend.key.height = unit(0.25, "cm")) +
     labs(x = NULL,
         y = NULL,
         fill = "Euclidean distance")
@@ -738,7 +778,8 @@ output$jaccard_similarity <- renderPlot({
         axis.text.y = element_text(angle = 0,
                         hjust = 1, vjust = 0.5),
         legend.position = "bottom",
-        legend.key.width = unit(2.5, "cm")) +
+        legend.key.width = unit(2.5, "cm"),
+        legend.key.height = unit(0.25, "cm")) +
     labs(x = NULL,
         y = NULL,
         fill = "Jaccard similarity")
