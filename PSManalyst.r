@@ -3,7 +3,7 @@
 ## It is possible to filter the PSMs by the hyperscore
 
 # Check if the required R libraries are installed and install them if necessary.
-CRAN_packages <- c("shiny", "shinydashboard", "tidyverse", "janitor", "ggseqlogo", "ggtext", "lsa", "plotly", "viridis", "ggfortify")
+CRAN_packages <- c("shiny", "shinydashboard", "tidyverse", "janitor", "ggseqlogo", "ggtext", "lsa", "vegan", "plotly", "viridis", "ggfortify")
 not_installed_CRAN <- CRAN_packages[!(CRAN_packages %in% installed.packages()[ , "Package"])]
 if(length(not_installed_CRAN)) install.packages(not_installed_CRAN)
 
@@ -24,6 +24,7 @@ library(lsa)              # from CRAN
 library(plotly)           # from CRAN
 library(viridis)          # from CRAN
 library(ggfortify)        # from CRAN
+library(vegan)            # from CRAN
 
 # Increase the maximum file size to 1000 MB
 options(shiny.maxRequestSize = 1000 * 1024^2)
@@ -161,7 +162,7 @@ ui <- dashboardPage(
                   box(title = "Next Score distribution", status = "primary", solidHeader = TRUE, plotOutput("plot10"), collapsible = TRUE),
                   box(title = "PeptideProphet probability", status = "primary", solidHeader = TRUE, plotOutput("plot11"), collapsible = TRUE),
                   box(title = "Expectation (PeptideProphet)", status = "primary", solidHeader = TRUE, plotOutput("plot12"), collapsible = TRUE),
-                  box(title = "Purity (Philosopher Freequant)", status = "primary", solidHeader = TRUE, plotOutput("plot13"), collapsible = TRUE),
+                  box(title = "Assigned modifications", status = "primary", solidHeader = TRUE, plotOutput("plot13"), collapsible = TRUE),
                   box(title = "Top 20 proteins with more PSMs", status = "primary", solidHeader = TRUE, plotOutput("plot15"), collapsible = TRUE)
       )
     ),
@@ -352,7 +353,9 @@ frequency_matrix_of_aa <- reactive({
         y = "Scan range (m/z)") +
     theme(
     legend.position = "bottom",
-        legend.key.width = unit(1.5, "cm"))
+        legend.key.width = unit(1.5, "cm"),
+        legend.key.height = unit(0.25, "cm")
+    )
   })
 
   output$plot7 <- renderPlot({
@@ -430,12 +433,18 @@ frequency_matrix_of_aa <- reactive({
   output$plot13 <- renderPlot({
     data() %>%
     as.data.frame() %>%
-    ggplot() +
-    geom_histogram(aes(x = purity), 
-        fill = "dodgerblue4", alpha = 0.7, color = "black") +
-    labs(x = "Purity",
-        y = "Count",
-        caption = "Proportion of total ion abundance in the inclusion window from the precursor (including precursor isotopic peaks)")
+    tidyr::separate_rows(assigned_modifications, sep = ",") %>%
+    dplyr::mutate(assigned_modifications = str_remove_all(assigned_modifications, ".*\\(|\\)"),
+                  assigned_modifications = ifelse(is.na(assigned_modifications), 
+                                                    "Unassigned modifications", 
+                                                    assigned_modifications)) %>%
+    dplyr::count(assigned_modifications) %>%
+    ggplot(aes(y = assigned_modifications, x = n)) +
+      geom_col(fill = "dodgerblue4", alpha = 0.7, color = "black") +
+      geom_text(aes(label = n), hjust = -0.1, size = 5) +
+      labs(y = "Assigned Modifications",
+           x = "Count",
+           caption = "Number of modifications assigned to the peptide sequence")
   })
 
   output$plot14 <- renderPlot({
@@ -475,10 +484,14 @@ frequency_matrix_of_aa <- reactive({
     data() %>%
     as.data.frame() %>%
     dplyr::count(peptide) %>%
+    dplyr::mutate(frequency = round(n / sum(n) * 100, 2)) %>%
+    dplyr::select(-n) %>%
     wordcloud2::wordcloud2(color = rep_len(color_blue_seq, nrow(.)),
         backgroundColor = "white",
         size = 1,
-        shuffle = TRUE)
+        shuffle = TRUE,
+        minRotation = -pi/6,
+        maxRotation = pi/6)
   })
 
 # Import and pre-process the uploaded protein.tsv file
