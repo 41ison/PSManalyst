@@ -124,7 +124,7 @@ ui <- dashboardPage(
                     label = "PeptideProphet Probability",
                     min = 0, max = 1,
                     value = 0.95, step = 0.05),
-      textInput("protein_pettern",
+      textInput("protein_pattern",
                 label = "Remove an organism by entry name",
                 value = "",
                 placeholder = "HUMAN"),
@@ -233,13 +233,13 @@ output$info_box1 <- renderInfoBox({
       janitor::clean_names() %>%
       dplyr::filter(.$hyperscore >= input$hyperscore & .$probability >= input$probability) 
   # Filter by organism entry name if provided
-    if (input$protein_pettern != "") {
+    if (input$protein_pattern != "") {
       if (input$case_sensitive) {
         psm_file <- psm_file %>%
-          dplyr::filter(str_detect(entry_name, input$protein_pettern, negate = TRUE))
+          dplyr::filter(str_detect(entry_name, input$protein_pattern, negate = TRUE))
       } else {
         psm_file <- psm_file %>%
-          dplyr::filter(str_detect(tolower(entry_name), tolower(input$protein_pettern), negate = TRUE))
+          dplyr::filter(str_detect(tolower(entry_name), tolower(input$protein_pattern), negate = TRUE))
       }
     }
       
