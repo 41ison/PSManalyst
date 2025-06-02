@@ -209,7 +209,7 @@ output$info_box1 <- renderInfoBox({
                        "and PeptideProphet probability ≥", input$probability)
   
   if (!is.null(input$protein_pattern) && input$protein_pattern != "") {
-    pattern_text <- if(inpt$case_sensitive) {
+    pattern_text <- if(input$case_sensitive) {
       paste("and organism entry name matching:", input$protein_pattern, "(case sensitive)")
     }
     else {
