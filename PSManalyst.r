@@ -478,13 +478,16 @@ output$plot06 <- renderPlot({
 output$plot09 <- renderPlot({
     data() %>%
       as.data.frame() %>%
-      ggplot(aes(x = isoelectric_point)) +
-      geom_histogram(fill = input$plot_color, color = "black") +
-      labs(x = "Isoelectric Point (pI)",
+      ggplot(aes(x = isoelectric_point, fill = stat(x))) +
+      geom_histogram(color = "black") +
+      labs(x = NULL,
            y = "Count") +
+      scale_fill_viridis_c(name = "Isoelectric Point (pI)", option = "C") +
       theme(text = element_text(size = 15, color = "black"),
-            axis.text.x = element_text(hjust = 0.5)
-           )
+            axis.text.x = element_text(hjust = 0.5),
+            legend.position = "bottom",
+            legend.key.width = unit(2.5, "cm"),
+            legend.key.height = unit(0.25, "cm"))
   })
     
   output$plot10 <- renderPlot({
