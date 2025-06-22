@@ -3,7 +3,7 @@
 ## It is possible to filter the PSMs by the hyperscore
 
 # Check if the required R libraries are installed and install them if necessary.
-CRAN_packages <- c("shiny", "shinydashboard", "tidyverse", "janitor", "ggseqlogo", "ggtext", "lsa", "vegan", "plotly", "viridis", "ggfortify")
+CRAN_packages <- c("shiny", "shinydashboard", "tidyverse", "janitor", "ggseqlogo", "ggtext", "lsa", "vegan", "plotly", "viridis", "ggfortify", "colourpicker")
 not_installed_CRAN <- CRAN_packages[!(CRAN_packages %in% installed.packages()[ , "Package"])]
 if(length(not_installed_CRAN)) install.packages(not_installed_CRAN)
 
@@ -25,6 +25,7 @@ library(plotly)           # from CRAN
 library(viridis)          # from CRAN
 library(ggfortify)        # from CRAN
 library(vegan)            # from CRAN
+library(colourpicker)     # from CRAN
 
 # Increase the maximum file size to 1000 MB
 options(shiny.maxRequestSize = 1000 * 1024^2)
@@ -47,7 +48,11 @@ aa_freq <- function(x) {
 # to impute missing amino acids with zero and reorder if necessary
 complete_and_reorder_amino_acids <- function(element) {
 # List of 20 amino acids
-twenty_amino_acids <- c('A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y')
+twenty_amino_acids <- c('A', 'C', 'D', 'E', 
+                        'F', 'G', 'H', 'I', 
+                        'K', 'L', 'M', 'N', 
+                        'P', 'Q', 'R', 'S', 
+                        'T', 'V', 'W', 'Y')
 
 # Complete missing amino acids with zero
   for (amino_acid in twenty_amino_acids) {
@@ -84,12 +89,30 @@ extract_matrix <- function(data) {
 
   final_matrix <- matrix(unlist(new_list,), ncol = 8, byrow = FALSE)
 
-  colnames(final_matrix) <- c("P4", "P3", "P2", "P1", "P1'", "P2'", "P3'", "P4'")
-  row.names(final_matrix) <- c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y")
+  colnames(final_matrix) <- c("P4", "P3", "P2", "P1", 
+                              "P1'", "P2'", "P3'", "P4'")
+  row.names(final_matrix) <- c("A", "C", "D", "E", 
+                               "F", "G", "H", "I", 
+                               "K", "L", "M", "N", 
+                               "P", "Q", "R", "S", 
+                               "T", "V", "W", "Y")
 
   return(final_matrix)
 }
 
+# GRAVY (Grand Average of Hydropathy)
+# Kyte J, Doolittle RF. A simple method for displaying the hydropathic character of a protein. J Mol Biol. 1982 May 5;157(1):105-32. doi: 10.1016/0022-2836(82)90515-0
+GRAVY <- function(sequence) {
+  # Vector of hydropathy index for each amino acid
+  hydropathy_index <- c(A = 1.8, R = -4.5, N = -3.5, D = -3.5, C = 2.5,
+                        Q = -3.5, E = -3.5, G = -0.4, H = -3.2, I = 4.5,
+                        L = 3.8, K = -3.9, M = 1.9, F = 2.8, P = -1.6,
+                        S = -0.8, T = -0.7, W = -0.9, Y = -1.3, V = 4.2)
+  # Calculate the GRAVY score
+  scores <- sapply(strsplit(sequence, NULL)[[1]], function(aa) hydropathy_index[aa])
+  return(mean(scores, na.rm = TRUE))
+}
+                      
 color_blue_seq <- c("#d4e6f1", "#a9cce3", "#7fb3d5", "#5499c7", "#2980b9", "#1f618d", "#154360")
 
 # Define UI for application that reads a psm.tsv file and generates a PICS map report dashboard
@@ -146,7 +169,11 @@ ui <- dashboardPage(
               choices = NULL),
       selectInput("ycol",
               "Y Sample",
-              choices = NULL)
+              choices = NULL),
+      colourpicker::colourInput(
+          inputId = "plot_color",
+          label = "Select plot color",
+          value = "#5499c7")
     )
   ),
 
@@ -155,39 +182,41 @@ ui <- dashboardPage(
       tabItem(tabName = "psm",
               fluidRow(
                   infoBoxOutput("info_box1", width = 12),
-                  box(title = "Protease fingerprint", status = "primary", solidHeader = TRUE, plotOutput("plot1"), collapsible = TRUE),
-                  box(title = "Word cloud of peptide sequences", status = "primary", solidHeader = TRUE, wordcloud2Output("plot16"), collapsible = TRUE),
-                  box(title = "N-termini SeqLogo", status = "primary", solidHeader = TRUE, plotOutput("plot3"), collapsible = TRUE),
-                  box(title = "C-termini SeqLogo", status = "primary", solidHeader = TRUE, plotOutput("plot4"), collapsible = TRUE),
-                  box(title = "m/z over retention time", status = "primary", solidHeader = TRUE, plotOutput("plot6"), collapsible = TRUE),
-                  box(title = "Mass error (ppm)", status = "primary", solidHeader = TRUE, plotOutput("plot8"), collapsible = TRUE),
-                  box(title = "Peptide length", status = "primary", solidHeader = TRUE, plotOutput("plot2"), collapsible = TRUE),
-                  box(title = "Charge state distribution", status = "primary", solidHeader = TRUE, plotOutput("plot5"), collapsible = TRUE),
-                  box(title = "Number of missed cleavages", status = "primary", solidHeader = TRUE, plotOutput("plot7"), collapsible = TRUE),
-                  box(title = "Uniqueness", status = "primary", solidHeader = TRUE, plotOutput("plot14"), collapsible = TRUE),
-                  box(title = "Hyperscore distribution", status = "primary", solidHeader = TRUE, plotOutput("plot9"), collapsible = TRUE),
-                  box(title = "Next Score distribution", status = "primary", solidHeader = TRUE, plotOutput("plot10"), collapsible = TRUE),
-                  box(title = "PeptideProphet probability", status = "primary", solidHeader = TRUE, plotOutput("plot11"), collapsible = TRUE),
-                  box(title = "Expectation (PeptideProphet)", status = "primary", solidHeader = TRUE, plotOutput("plot12"), collapsible = TRUE),
-                  box(title = "Assigned modifications", status = "primary", solidHeader = TRUE, plotOutput("plot13"), collapsible = TRUE),
-                  box(title = "Top 20 proteins with more PSMs", status = "primary", solidHeader = TRUE, plotOutput("plot15"), collapsible = TRUE)
+                  box(title = "Protease fingerprint", status = "primary", solidHeader = TRUE, plotOutput("plot01"), collapsible = TRUE),
+                  box(title = "Word cloud of peptide sequences", status = "primary", solidHeader = TRUE, wordcloud2Output("plot02"), collapsible = TRUE),
+                  box(title = "N-termini SeqLogo", status = "primary", solidHeader = TRUE, plotOutput("plot03"), collapsible = TRUE),
+                  box(title = "C-termini SeqLogo", status = "primary", solidHeader = TRUE, plotOutput("plot04"), collapsible = TRUE),
+                  box(title = "m/z over retention time", status = "primary", solidHeader = TRUE, plotOutput("plot05"), collapsible = TRUE),
+                  box(title = "Mass error (ppm)", status = "primary", solidHeader = TRUE, plotOutput("plot06"), collapsible = TRUE),
+                  box(title = "Peptide length", status = "primary", solidHeader = TRUE, plotOutput("plot07"), collapsible = TRUE),
+                  box(title = "GRAVY (Grand Average of Hydropathy)", status = "primary", solidHeader = TRUE, plotOutput("plot08"), collapsible = TRUE),
+                  box(title = "Isoelectric Point (pI)", status = "primary", solidHeader = TRUE, plotOutput("plot09"), collapsible = TRUE),
+                  box(title = "Charge state distribution", status = "primary", solidHeader = TRUE, plotOutput("plot10"), collapsible = TRUE),
+                  box(title = "Number of missed cleavages", status = "primary", solidHeader = TRUE, plotOutput("plot11"), collapsible = TRUE),
+                  box(title = "Uniqueness", status = "primary", solidHeader = TRUE, plotOutput("plot12"), collapsible = TRUE),
+                  box(title = "Hyperscore distribution", status = "primary", solidHeader = TRUE, plotOutput("plot13"), collapsible = TRUE),
+                  box(title = "Next Score distribution", status = "primary", solidHeader = TRUE, plotOutput("plot14"), collapsible = TRUE),
+                  box(title = "PeptideProphet probability", status = "primary", solidHeader = TRUE, plotOutput("plot15"), collapsible = TRUE),
+                  box(title = "Expectation (PeptideProphet)", status = "primary", solidHeader = TRUE, plotOutput("plot16"), collapsible = TRUE),
+                  box(title = "Assigned modifications", status = "primary", solidHeader = TRUE, plotOutput("plot17"), collapsible = TRUE),
+                  box(title = "Top 20 proteins with more PSMs", status = "primary", solidHeader = TRUE, plotOutput("plot18"), collapsible = TRUE)
       )
     ),
 
       tabItem(tabName = "protein",
             fluidRow(
                   infoBoxOutput("info_box2", width = 12),
-                  box(title = "Protein coverage", status = "primary", solidHeader = TRUE, plotOutput("plot17"), collapsible = TRUE),
-                  box(title = "Number of proteins by organim", status = "primary", solidHeader = TRUE, plotOutput("plot18"), collapsible = TRUE),
-                  box(title = "Protein existence evidence", status = "primary", solidHeader = TRUE, plotOutput("plot19"), collapsible = TRUE),
-                  box(title = "Protein probability (ProteinProphet)", status = "primary", solidHeader = TRUE, plotOutput("plot20"), collapsible = TRUE),
-                  box(title = "Top Peptide Probability", status = "primary", solidHeader = TRUE, plotOutput("plot21"), collapsible = TRUE),
-                  box(title = "Total peptides mapped to the proteins", status = "primary", solidHeader = TRUE, plotOutput("plot22"), collapsible = TRUE),
-                  box(title = "Razor spectral count", status = "primary", solidHeader = TRUE, plotOutput("plot23"), collapsible = TRUE),
-                  box(title = "Razor intensity", status = "primary", solidHeader = TRUE, plotOutput("plot24"), collapsible = TRUE),
-                  box(title = "Top 20 proteins with higher razor intensity", status = "primary", solidHeader = TRUE, plotOutput("plot25"), collapsible = TRUE),
-                  box(title = "MaxLFQ intensity distribution", status = "primary", solidHeader = TRUE, plotOutput("plot26"), collapsible = TRUE),
-                  box(title = "Sample correlation - Non-normalized log2(Intensity)", status = "primary", height = 600, solidHeader = TRUE, plotlyOutput("plot27"), collapsible = FALSE),
+                  box(title = "Protein coverage", status = "primary", solidHeader = TRUE, plotOutput("plot19"), collapsible = TRUE),
+                  box(title = "Number of proteins by organim", status = "primary", solidHeader = TRUE, plotOutput("plot20"), collapsible = TRUE),
+                  box(title = "Protein existence evidence", status = "primary", solidHeader = TRUE, plotOutput("plot21"), collapsible = TRUE),
+                  box(title = "Protein probability (ProteinProphet)", status = "primary", solidHeader = TRUE, plotOutput("plot22"), collapsible = TRUE),
+                  box(title = "Top Peptide Probability", status = "primary", solidHeader = TRUE, plotOutput("plot23"), collapsible = TRUE),
+                  box(title = "Total peptides mapped to the proteins", status = "primary", solidHeader = TRUE, plotOutput("plot24"), collapsible = TRUE),
+                  box(title = "Razor spectral count", status = "primary", solidHeader = TRUE, plotOutput("plot25"), collapsible = TRUE),
+                  box(title = "Razor intensity", status = "primary", solidHeader = TRUE, plotOutput("plot26"), collapsible = TRUE),
+                  box(title = "Top 20 proteins with higher razor intensity", status = "primary", solidHeader = TRUE, plotOutput("plot27"), collapsible = TRUE),
+                  box(title = "MaxLFQ intensity distribution", status = "primary", solidHeader = TRUE, plotOutput("plot28"), collapsible = TRUE),
+                  box(title = "Sample correlation - Non-normalized log2(Intensity)", status = "primary", height = 600, solidHeader = TRUE, plotlyOutput("plot29"), collapsible = FALSE),
                 tabBox(
                   title = "Similarity metrics", side = "right", height = 600,
                   tabPanel("Cosine similarity", plotOutput("cosine_similarity")),
@@ -254,7 +283,8 @@ output$info_box1 <- renderInfoBox({
         fingerprint_Nterm = str_remove_all(fingerprint_Nterm, "\\."),
         fingerprint_Cterm = str_extract(fingerprint_Cterm, ".{4}\\..{4}"),
         fingerprint_Cterm = str_remove_all(fingerprint_Cterm, "\\."),
-        delta_mass_ppm = (observed_m_z-calculated_m_z)/calculated_m_z*1e6
+        delta_mass_ppm = (observed_m_z-calculated_m_z)/calculated_m_z*1e6,
+        gravy = sapply(peptide, GRAVY)
         ) %>%
       dplyr::relocate(extended_peptide, .before = fingerprint_Nterm)
   })
@@ -266,15 +296,20 @@ frequency_matrix_of_aa <- reactive({
 })
 
   # Render plots for the PSM viewer
-  output$plot1 <- renderPlot({
+  output$plot01 <- renderPlot({
     frequency_matrix_of_aa() %>%
     as.data.frame() %>%
     rownames_to_column(var = "residue") %>%
     pivot_longer(cols = -residue, names_to = "position",
                     values_to = "frequency") %>%
     dplyr::mutate(
-        position = factor(position, c("P4", "P3", "P2", "P1", "P1'", "P2'", "P3'", "P4'")),
-        residue = factor(residue, c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y"))
+        position = factor(position, c("P4", "P3", "P2", "P1", 
+                                      "P1'", "P2'", "P3'", "P4'")),
+        residue = factor(residue, c("A", "C", "D", "E", 
+                                    "F", "G", "H", "I", 
+                                    "K", "L", "M", "N", 
+                                    "P", "Q", "R", "S", 
+                                    "T", "V", "W", "Y"))
         ) %>%
     ggplot(aes(x = position, y = residue, fill = frequency)) +
     geom_tile(color = "black") +
@@ -298,20 +333,22 @@ frequency_matrix_of_aa <- reactive({
         legend.title.position = "top")
   })
 
-  output$plot2 <- renderPlot({
+  output$plot02 <- renderWordcloud2({
     data() %>%
     as.data.frame() %>%
-    ggplot() +
-    geom_density(aes(x = peptide_length),
-        fill = "#5499c7") +
-    labs(x = "Peptide Length",
-        y = "Frequency (%)") +
-    theme(text = element_text(size = 15, color = "black"),
-        axis.text.x = element_text(hjust = 0.5),
-        plot.title = element_text(hjust = 0.5),)
+    dplyr::count(peptide) %>%
+    dplyr::mutate(frequency = round(n / sum(n) * 100, 2)) %>%
+    dplyr::select(-n) %>%
+    wordcloud2::wordcloud2(color = rep_len(color_blue_seq, nrow(.)),
+        backgroundColor = "white",
+        size = 1,
+        shuffle = TRUE,
+        minRotation = -pi/6,
+        maxRotation = pi/6,
+        widgetsize = "100%")
   })
 
-  output$plot3 <- renderPlot({
+  output$plot03 <- renderPlot({
     data() %>%
     as.data.frame() %>%
     dplyr::select(fingerprint_Nterm) %>%
@@ -325,7 +362,8 @@ frequency_matrix_of_aa <- reactive({
   geom_vline(xintercept = 4.5, 
         color = "black", linetype = "dashed") +
   scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8),
-                     labels = c("1" = "P4", "2" = "P3", "3" = "P2", "4" = "P1", "5" = "P1'", "6" = "P2'", "7" =  "P3'", "8" = "P4'")) +
+                     labels = c("1" = "P4", "2" = "P3", "3" = "P2", "4" = "P1", 
+                                "5" = "P1'", "6" = "P2'", "7" =  "P3'", "8" = "P4'")) +
   theme_bw() +
   theme(plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
     text = element_text(size = 15, color = "black"),
@@ -338,7 +376,7 @@ frequency_matrix_of_aa <- reactive({
        y = "Bits")
   })
 
-  output$plot4 <- renderPlot({
+  output$plot04 <- renderPlot({
     data() %>%
     as.data.frame() %>%
     dplyr::select(fingerprint_Cterm) %>%
@@ -352,7 +390,8 @@ frequency_matrix_of_aa <- reactive({
   geom_vline(xintercept = 4.5, 
         color = "black", linetype = "dashed") +
   scale_x_continuous(breaks = c(1, 2, 3, 4, 5, 6, 7, 8),
-                     labels = c("1" = "P4", "2" = "P3", "3" = "P2", "4" = "P1", "5" = "P1'", "6" = "P2'", "7" =  "P3'", "8" = "P4'")) +
+                     labels = c("1" = "P4", "2" = "P3", "3" = "P2", "4" = "P1", 
+                                "5" = "P1'", "6" = "P2'", "7" =  "P3'", "8" = "P4'")) +
   theme_bw() +
   theme(plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
     text = element_text(size = 15, color = "black"),
@@ -365,17 +404,7 @@ frequency_matrix_of_aa <- reactive({
        y = "Bits")
   })
 
-  output$plot5 <- renderPlot({
-    data() %>%
-    as.data.frame() %>%
-    ggplot() +
-    geom_bar(aes(x = charge), 
-      fill = "#5499c7", color = "black") +
-    labs(x = "Charge state",
-        y = "Count")
-  })
-
-  output$plot6 <- renderPlot({
+output$plot05 <- renderPlot({
     data() %>%
     as.data.frame() %>%
     ggplot(aes(x = retention / 60, y = observed_m_z)) +
@@ -391,20 +420,7 @@ frequency_matrix_of_aa <- reactive({
     )
   })
 
-  output$plot7 <- renderPlot({
-    data() %>%
-    as.data.frame() %>%
-    dplyr::count(number_of_missed_cleavages) %>%
-    dplyr::mutate(number_of_missed_cleavages = factor(number_of_missed_cleavages)) %>%
-    ggplot(aes(x = number_of_missed_cleavages, y = n)) +
-    geom_bar(stat = "identity", position = "dodge", show.legend = FALSE, 
-        fill = "#5499c7", color = "black") +
-    geom_text(aes(label = n), vjust = -0.5, size = 5) +
-    labs(x = "Number of Missed Cleavages",
-        y = "Count")
-  })
-
- output$plot8 <- renderPlot({
+output$plot06 <- renderPlot({
     data() %>%
     as.data.frame() %>%
       dplyr::filter(abs(delta_mass_ppm) < 100) %>% 
@@ -418,69 +434,68 @@ frequency_matrix_of_aa <- reactive({
            y = "Mass error (ppm)",
           caption = "ppm error is calculated as ∆m/z over theoretical m/z * 1e6")
   })
-
-  output$plot9 <- renderPlot({
+    
+  output$plot07 <- renderPlot({
     data() %>%
     as.data.frame() %>%
     ggplot() +
-    geom_histogram(aes(x = hyperscore), 
-        fill = "#5499c7", color = "black") +
-    labs(x = "Hyperscore",
-        y = "Count",
-        caption = "Similarity score between observed and theoretical spectra, higher values indicate greater similarity")
+    geom_density(aes(x = peptide_length),
+        fill = input$plot_color) +
+    labs(x = "Peptide Length",
+        y = "Frequency (%)") +
+    theme(text = element_text(size = 15, color = "black"),
+        axis.text.x = element_text(hjust = 0.5),
+        plot.title = element_text(hjust = 0.5),)
   })
 
+  output$plot08 <- renderPlot({
+    data() %>%
+      as.data.frame() %>%
+      ggplot(aes(x = gravy)) +
+      geom_histogram(fill = input$plot_color, color = "black") +
+      labs(x = "GRAVY Index",
+           y = "Count",
+           caption = "GRAVY is a measure of the hydropathic character of a sequence") +
+      theme(text = element_text(size = 15, color = "black"),
+            axis.text.x = element_text(hjust = 0.5))
+  })
+
+output$plot09 <- renderPlot({
+    data() %>%
+      as.data.frame() %>%
+      ggplot(aes(x = isoelectric_point)) +
+      geom_histogram(fill = input$plot_color, color = "black") +
+      labs(x = "Isoelectric Point (pI)",
+           y = "Count") +
+      theme(text = element_text(size = 15, color = "black"),
+            axis.text.x = element_text(hjust = 0.5)
+           )
+  })
+    
   output$plot10 <- renderPlot({
     data() %>%
     as.data.frame() %>%
     ggplot() +
-    geom_histogram(aes(x = nextscore), 
-        fill = "#5499c7", color = "black") +
-    labs(x = "Nextscore",
-        y = "Count",
-        caption = "Similarity score (hyperscore) of the second-highest scoring match for the spectrum")
+    geom_bar(aes(x = charge), 
+      fill = input$plot_color, color = "black") +
+    labs(x = "Charge state",
+        y = "Count")
   })
 
   output$plot11 <- renderPlot({
     data() %>%
     as.data.frame() %>%
-    ggplot() +
-    geom_histogram(aes(x = probability), 
-        fill = "#5499c7", color = "black") +
-    labs(x = "PeptideProphet Probability",
-        y = "Count",
-        caption = "Confidence score determined by PeptideProphet, higher values indicate greater confidence")
+    dplyr::count(number_of_missed_cleavages) %>%
+    dplyr::mutate(number_of_missed_cleavages = factor(number_of_missed_cleavages)) %>%
+    ggplot(aes(x = number_of_missed_cleavages, y = n)) +
+    geom_bar(stat = "identity", position = "dodge", show.legend = FALSE, 
+        fill = input$plot_color, color = "black") +
+    geom_text(aes(label = n), vjust = -0.5, size = 5) +
+    labs(x = "Number of Missed Cleavages",
+        y = "Count")
   })
 
   output$plot12 <- renderPlot({
-    data() %>%
-    as.data.frame() %>%
-    ggplot() +
-    geom_histogram(aes(x = expectation), 
-        fill = "#5499c7", color = "black") +
-    labs(x = "Expectation value",
-        y = "Count",
-        caption = "Expectation value from statistical modeling with PeptideProphet, lower values indicate higher likelihood")
-  })
-
-  output$plot13 <- renderPlot({
-    data() %>%
-    as.data.frame() %>%
-    tidyr::separate_rows(assigned_modifications, sep = ",") %>%
-    dplyr::mutate(assigned_modifications = str_remove_all(assigned_modifications, ".*\\(|\\)"),
-                  assigned_modifications = ifelse(is.na(assigned_modifications), 
-                                                    "Unassigned modifications", 
-                                                    assigned_modifications)) %>%
-    dplyr::count(assigned_modifications) %>%
-    ggplot(aes(y = assigned_modifications, x = n)) +
-      geom_col(fill = "#5499c7", color = "black") +
-      geom_text(aes(label = n), hjust = -0.1, size = 5) +
-      labs(y = "Assigned Modifications",
-           x = "Count",
-           caption = "Number of modifications assigned to the peptide sequences")
-  })
-
-  output$plot14 <- renderPlot({
     data() %>%
     dplyr::count(is_unique) %>%
     as.data.frame() %>%
@@ -490,13 +505,74 @@ frequency_matrix_of_aa <- reactive({
     )) %>%
     ggplot(aes(x = uniqueness, y = n)) +
     geom_bar(stat = "identity", position = "dodge", show.legend = FALSE, 
-        fill = "#5499c7", color = "black") +
+        fill = input$plot_color, color = "black") +
     geom_text(aes(label = n), vjust = -0.5, size = 5) +
     labs(x = "Unique peptides",
         y = "Count")
   })
+    
+  output$plot13 <- renderPlot({
+    data() %>%
+    as.data.frame() %>%
+    ggplot() +
+    geom_histogram(aes(x = hyperscore), 
+        fill = input$plot_color, color = "black") +
+    labs(x = "Hyperscore",
+        y = "Count",
+        caption = "Similarity score between observed and theoretical spectra, higher values indicate greater similarity")
+  })
+
+  output$plot14 <- renderPlot({
+    data() %>%
+    as.data.frame() %>%
+    ggplot() +
+    geom_histogram(aes(x = nextscore), 
+        fill = input$plot_color, color = "black") +
+    labs(x = "Nextscore",
+        y = "Count",
+        caption = "Similarity score (hyperscore) of the second-highest scoring match for the spectrum")
+  })
 
   output$plot15 <- renderPlot({
+    data() %>%
+    as.data.frame() %>%
+    ggplot() +
+    geom_histogram(aes(x = probability), 
+        fill = input$plot_color, color = "black") +
+    labs(x = "PeptideProphet Probability",
+        y = "Count",
+        caption = "Confidence score determined by PeptideProphet, higher values indicate greater confidence")
+  })
+
+  output$plot16 <- renderPlot({
+    data() %>%
+    as.data.frame() %>%
+    ggplot() +
+    geom_histogram(aes(x = expectation), 
+        fill = input$plot_color, color = "black") +
+    labs(x = "Expectation value",
+        y = "Count",
+        caption = "Expectation value from statistical modeling with PeptideProphet, lower values indicate higher likelihood")
+  })
+
+  output$plot17 <- renderPlot({
+    data() %>%
+    as.data.frame() %>%
+    tidyr::separate_rows(assigned_modifications, sep = ",") %>%
+    dplyr::mutate(assigned_modifications = str_remove_all(assigned_modifications, ".*\\(|\\)"),
+                  assigned_modifications = ifelse(is.na(assigned_modifications), 
+                                                    "Unassigned modifications", 
+                                                    assigned_modifications)) %>%
+    dplyr::count(assigned_modifications) %>%
+    ggplot(aes(y = assigned_modifications, x = n)) +
+      geom_col(fill = input$plot_color, color = "black") +
+      geom_text(aes(label = n), hjust = -0.1, size = 5) +
+      labs(y = "Assigned Modifications",
+           x = "Count",
+           caption = "Number of modifications assigned to the peptide sequences")
+  })
+
+  output$plot18 <- renderPlot({
     data() %>%
     as.data.frame() %>%
     dplyr::group_by(entry_name) %>%
@@ -508,24 +584,9 @@ frequency_matrix_of_aa <- reactive({
     head(20) %>%
     ggplot() +
     geom_bar(aes(x = n_psm, y = reorder(entry_name, n_psm)), 
-        fill = "#5499c7", color = "black", stat = "identity") +
+        fill = input$plot_color, color = "black", stat = "identity") +
     labs(x = "Number of PSMs",
         y = "Protein")
-  })
-
-  output$plot16 <- renderWordcloud2({
-    data() %>%
-    as.data.frame() %>%
-    dplyr::count(peptide) %>%
-    dplyr::mutate(frequency = round(n / sum(n) * 100, 2)) %>%
-    dplyr::select(-n) %>%
-    wordcloud2::wordcloud2(color = rep_len(color_blue_seq, nrow(.)),
-        backgroundColor = "white",
-        size = 1,
-        shuffle = TRUE,
-        minRotation = -pi/6,
-        maxRotation = pi/6,
-        widgetsize = "100%")
   })
 
 # Import and pre-process the uploaded protein.tsv file
@@ -544,30 +605,30 @@ frequency_matrix_of_aa <- reactive({
   })
   
 # Render plots for the protein viewer
-  output$plot17 <- renderPlot({
+  output$plot19 <- renderPlot({
     protein_data() %>%
     as.data.frame() %>%
     ggplot() +
     geom_histogram(aes(x = coverage), 
-        fill = "#5499c7", color = "black") +
+        fill = input$plot_color, color = "black") +
     labs(x = "Protein coverage (%)",
         y = "Count")
   })
 
-  output$plot18 <- renderPlot({
+  output$plot20 <- renderPlot({
     protein_data() %>%
     as.data.frame() %>%
     dplyr::count(organism) %>%
     ggplot() +
     geom_bar(aes(x = n, y = reorder(organism, n)),
-        fill = "#5499c7", color = "black", stat = "identity") +
+        fill = input$plot_color, color = "black", stat = "identity") +
     geom_text(aes(x = n, y = reorder(organism, n), label = n), hjust = -0.1, size = 5) +
     labs(x = "Number of proteins",
         y = NULL) +
     theme(axis.text.y = element_text(face = "italic"))
   })
 
-  output$plot19 <- renderPlot({
+  output$plot21 <- renderPlot({
     protein_data() %>%
     as.data.frame() %>%
      dplyr::mutate(
@@ -591,34 +652,13 @@ frequency_matrix_of_aa <- reactive({
         fill = NULL)
   })
 
-  output$plot20 <- renderPlot({
-    protein_data() %>%
-    as.data.frame() %>%
-    ggplot() +
-    geom_histogram(aes(x = protein_probability),
-        fill = "#5499c7", color = "black") +
-    labs(x = "Protein Probability",
-        y = "Count")
-  })
-
-  output$plot21 <- renderPlot({
-    protein_data() %>%
-    as.data.frame() %>%
-    ggplot() +
-    geom_histogram(aes(x = top_peptide_probability),
-        fill = "#5499c7", color = "black") +
-    labs(x = "Peptide Probability",
-        y = "Count",
-        caption = "Best peptide probability of supporting peptides")
-  })
-
   output$plot22 <- renderPlot({
     protein_data() %>%
     as.data.frame() %>%
     ggplot() +
-    geom_histogram(aes(x = total_peptides),
-        fill = "#5499c7", color = "black") +
-    labs(x = "Total peptides mapped to proteins",
+    geom_histogram(aes(x = protein_probability),
+        fill = input$plot_color, color = "black") +
+    labs(x = "Protein Probability",
         y = "Count")
   })
 
@@ -626,32 +666,53 @@ frequency_matrix_of_aa <- reactive({
     protein_data() %>%
     as.data.frame() %>%
     ggplot() +
-    geom_histogram(aes(x = razor_spectral_count),
-        fill = "#5499c7", color = "black") +
-    labs(x = "Razor Spectral Count",
+    geom_histogram(aes(x = top_peptide_probability),
+        fill = input$plot_color, color = "black") +
+    labs(x = "Peptide Probability",
         y = "Count",
-        caption = "Number of PSMs corresponding to the razor peptides")
+        caption = "Best peptide probability of supporting peptides")
   })
 
   output$plot24 <- renderPlot({
     protein_data() %>%
     as.data.frame() %>%
     ggplot() +
+    geom_histogram(aes(x = total_peptides),
+        fill = input$plot_color, color = "black") +
+    labs(x = "Total peptides mapped to proteins",
+        y = "Count")
+  })
+
+  output$plot25 <- renderPlot({
+    protein_data() %>%
+    as.data.frame() %>%
+    ggplot() +
+    geom_histogram(aes(x = razor_spectral_count),
+        fill = input$plot_color, color = "black") +
+    labs(x = "Razor Spectral Count",
+        y = "Count",
+        caption = "Number of PSMs corresponding to the razor peptides")
+  })
+
+  output$plot26 <- renderPlot({
+    protein_data() %>%
+    as.data.frame() %>%
+    ggplot() +
     geom_histogram(aes(x = razor_intensity),
-        fill = "#5499c7", color = "black") +
+        fill = input$plot_color, color = "black") +
     labs(x = "Razor Intensity",
         y = "Count",
         caption = "Protein intensity calculated using the unique peptides (from the top-N algorithm)")
   })
 
-  output$plot25 <- renderPlot({
+  output$plot27 <- renderPlot({
     protein_data() %>%
     as.data.frame() %>%
     dplyr::arrange(desc(razor_intensity)) %>%
     head(20) %>%
     ggplot() +
     geom_bar(aes(x = log2(razor_intensity), y = reorder(entry_name, razor_intensity)),
-        fill = "#5499c7", color = "black", stat = "identity") +
+        fill = input$plot_color, color = "black", stat = "identity") +
     labs(x = "log2 of Razor Intensity",
         y = "Protein")
   })
@@ -675,7 +736,7 @@ frequency_matrix_of_aa <- reactive({
     updateSelectInput(session, "ycol", choices = colnames)
   })
 
-  output$plot26 <- renderPlot({
+  output$plot28 <- renderPlot({
     combined_protein_data() %>%
     as.data.frame() %>%
     rownames_to_column(var = "protein_id") %>%
@@ -686,7 +747,7 @@ frequency_matrix_of_aa <- reactive({
       ) %>%
     ggplot() +
     geom_violin(aes(x = sample, y = maxlfq_intensity),
-        fill = "#5499c7", alpha = 0.7, color = "black") +
+        fill = input$plot_color, alpha = 0.7, color = "black") +
     geom_boxplot(aes(x = sample, y = maxlfq_intensity),
         fill = "white", outliers = FALSE,
         color = "black", width = 0.1, show.legend = FALSE) +
@@ -695,13 +756,13 @@ frequency_matrix_of_aa <- reactive({
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   })
 
-output$plot27 <- renderPlotly({
+output$plot29 <- renderPlotly({
     combined_protein_data() %>%
     as.data.frame() %>%
     ggplot(aes(x = !!sym(input$xcol), y = !!sym(input$ycol))) +
     geom_point(alpha = 0.7, show.legend = FALSE) +
     geom_smooth(method = "lm", se = FALSE,
-        color = "#5499c7") +
+        color = input$plot_color) +
     labs(x = paste0("log2(", input$xcol, ")"),
         y = paste0("log2(", input$ycol, ")"))
   })
