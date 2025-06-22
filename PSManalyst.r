@@ -1,6 +1,7 @@
 ## PSM analyst dashboard for FragPipe search results
-## The files psm.tsv and protein.tsv are the inputs for the viewwer
-## It is possible to filter the PSMs by the hyperscore
+## The files psm.tsv and protein.tsv are the main inputs for the PSManalyst dashboard
+## It is possible to filter the PSMs by the hyperscore and PeptideProphet probability
+## You can remove a contaminant organism as well
 
 # Check if the required R libraries are installed and install them if necessary.
 CRAN_packages <- c("shiny", "shinydashboard", "tidyverse", "janitor", "ggseqlogo", "ggtext", "lsa", "vegan", "plotly", "viridis", "ggfortify", "colourpicker")
@@ -160,7 +161,7 @@ ui <- dashboardPage(
       sliderInput("probability",
                     label = "PeptideProphet Probability",
                     min = 0, max = 1,
-                    value = 0.95, step = 0.05),
+                    value = 0.95, step = 0.01),
       textInput("protein_pattern",
                 label = "Remove an organism by entry name",
                 value = "",
