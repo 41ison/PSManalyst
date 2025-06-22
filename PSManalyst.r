@@ -108,11 +108,25 @@ GRAVY <- function(sequence) {
                         Q = -3.5, E = -3.5, G = -0.4, H = -3.2, I = 4.5,
                         L = 3.8, K = -3.9, M = 1.9, F = 2.8, P = -1.6,
                         S = -0.8, T = -0.7, W = -0.9, Y = -1.3, V = 4.2)
-  # Calculate the GRAVY score
+  # Calculate the GRAVY index
   scores <- sapply(strsplit(sequence, NULL)[[1]], function(aa) hydropathy_index[aa])
   return(mean(scores, na.rm = TRUE))
 }
-                      
+
+  # Calculate the isoelectric point (pI) of a peptide sequence
+calculate_pI <- function(sequence) {
+  # Vector of pKa values for the amino acids
+  pKa_values <- c(A = 2.34, R = 12.48, N = 10.76, D = 3.86, C = 8.33,
+                  Q = 10.76, E = 4.25, G = 2.34, H = 6.00, I = 6.04,
+                  L = 6.04, K = 9.74, M = 5.74, F = 5.48, P = 1.99,
+                  S = 2.21, T = 2.15, W = 9.39, Y = 10.07, V = 6.02)
+  
+  # Calculate the pI based on the sequence
+  pI <- mean(sapply(strsplit(sequence, NULL)[[1]], function(aa) pKa_values[aa]), na.rm = TRUE)
+  
+  return(pI)
+}
+                    
 color_blue_seq <- c("#d4e6f1", "#a9cce3", "#7fb3d5", "#5499c7", "#2980b9", "#1f618d", "#154360")
 
 # Define UI for application that reads a psm.tsv file and generates a PICS map report dashboard
@@ -284,7 +298,8 @@ output$info_box1 <- renderInfoBox({
         fingerprint_Cterm = str_extract(fingerprint_Cterm, ".{4}\\..{4}"),
         fingerprint_Cterm = str_remove_all(fingerprint_Cterm, "\\."),
         delta_mass_ppm = (observed_m_z-calculated_m_z)/calculated_m_z*1e6,
-        gravy = sapply(peptide, GRAVY)
+        gravy = sapply(peptide, GRAVY),
+        isoelectric_point = sapply(peptide, calculate_pI)
         ) %>%
       dplyr::relocate(extended_peptide, .before = fingerprint_Nterm)
   })
