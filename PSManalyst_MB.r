@@ -55,7 +55,6 @@ library(colourpicker) # from CRAN
 # Increase the maximum file size to 1000 MB
 options(shiny.maxRequestSize = 1000 * 1024^2)
 
-# set the general theme for the plots
 theme_set(theme_bw())
 theme_update(
   text = element_text(color = "black", size = 12),
@@ -104,14 +103,14 @@ GRAVY <- function(sequence) {
     Y = -1.3,
     V = 4.2
   )
-  # Calculate the GRAVY index for the peptide sequence
+  # Calculate the GRAVY index for the peptide sequences
   scores <- sapply(strsplit(sequence, NULL)[[1]], function(aa) {
     hydropathy_index[aa]
   })
   return(mean(scores, na.rm = TRUE))
 }
 
-# Calculate the isoelectric point (pI) of a peptide sequence
+# Calculate the isoelectric point (pI) of peptide sequences
 calculate_pI <- function(sequence) {
   # Define the pKa values for the amino acids
   pKa_values <- c(
@@ -149,12 +148,8 @@ calculate_pI <- function(sequence) {
 # Calculate the Margalef’s index
 # Margalef R. Information theory in ecology. General Systems 3. 1958;36-71.
 calculate_margalef <- function(data) {
-  # Count unique peptide sequences
   S <- length(unique(data$peptide))
-  
-  # Total number of PSMs
   N <- nrow(data)
-  
   # Calculate Margalef's index: (S - 1) / ln(N)
   if (N > 1) {
     margalef_index <- (S - 1) / log(N)
@@ -165,7 +160,6 @@ calculate_margalef <- function(data) {
   return(margalef_index)
 }
 
-# User Interface for reading multiple psm.tsv files
 ui <- dashboardPage(
   dashboardHeader(
     title = "PSM Analyst for FragPipe",
@@ -180,7 +174,6 @@ ui <- dashboardPage(
     )
   ),
 
-  # Left sidebar structure
   dashboardSidebar(
     sidebarMenu(
       menuItem(
@@ -503,55 +496,36 @@ ui <- dashboardPage(
   )
 )
 
-# Define server logic required to read the psm.tsv file and generate the plots
 server <- function(input, output, session) {
-  # Reactive to store multiple PSM files
   multiple_psm_data <- eventReactive(input$load_psm_files, {
     req(input$data_directory)
-
-    # Validate directory exists
     if (!dir.exists(input$data_directory)) {
       showNotification("Directory does not exist!", type = "error")
       return(NULL)
     }
 
-    # Find all psm.tsv files recursively
     psm_files <- list.files(
       path = input$data_directory,
       pattern = "^psm\\.tsv$",
       recursive = TRUE,
       full.names = TRUE
     )
-
     if (length(psm_files) == 0) {
       showNotification("No psm.tsv files found!", type = "warning")
       return(NULL)
     }
-
     showNotification(
       paste("Found", length(psm_files), "PSM files"),
       type = "message"
     )
-
-    # Load and combine all PSM files
     all_data <- NULL
-
     for (file_path in psm_files) {
       tryCatch(
         {
-          # Extract subfolder name (immediate parent directory)
           subfolder_name <- basename(dirname(file_path))
-
-          # Read the file
           psm_data <- readr::read_tsv(file_path, show_col_types = FALSE)
-
-          # Clean names
           psm_data <- janitor::clean_names(psm_data)
-
-          # Add source folder column
           psm_data$source_folder <- subfolder_name
-
-          # Combine with existing data
           if (is.null(all_data)) {
             all_data <- psm_data
           } else {
@@ -569,8 +543,7 @@ server <- function(input, output, session) {
 
     return(all_data)
   })
-
-  # Status output for multiple files
+  
   output$psm_files_status <- renderText({
     if (input$load_psm_files == 0) {
       return("Click 'Load PSM Files' to search for files")
@@ -593,19 +566,14 @@ server <- function(input, output, session) {
     }
   })
 
-  # main data reactive
   data <- reactive({
     psm_file <- NULL
-
-    # Try multiple files first
     if (input$load_psm_files > 0) {
       multi_data <- multiple_psm_data()
       if (!is.null(multi_data)) {
         psm_file <- multi_data
       }
     }
-
-    # Fall back to single file upload
     if (is.null(psm_file) && !is.null(input$psm)) {
       psm_file <- readr::read_tsv(
         input$psm$datapath,
@@ -614,19 +582,14 @@ server <- function(input, output, session) {
         janitor::clean_names() %>%
         mutate(source_folder = "single_upload")
     }
-
-    # Return NULL if no data
     if (is.null(psm_file)) {
       return(NULL)
     }
-
-    # Apply filters
+    
     psm_file <- psm_file %>%
       dplyr::filter(
         hyperscore >= input$hyperscore & probability >= input$probability
       )
-
-    # Apply organism filter if provided
     if (input$protein_pattern != "") {
       if (input$case_sensitive) {
         psm_file <- psm_file %>%
@@ -645,7 +608,6 @@ server <- function(input, output, session) {
       }
     }
 
-    # PSM data processing
     psm_file <- psm_file %>%
       dplyr::mutate(
         fingerprint_Nterm = case_when(
@@ -683,7 +645,6 @@ server <- function(input, output, session) {
       input$probability
     )
 
-    # Add folder information if available
     if (!is.null(data()) && "source_folder" %in% colnames(data())) {
       n_folders <- length(unique(data()$source_folder))
       if (n_folders > 1) {
@@ -691,7 +652,6 @@ server <- function(input, output, session) {
       }
     }
 
-    # Add protein pattern info if provided
     if (!is.null(input$protein_pattern) && input$protein_pattern != "") {
       pattern_text <- if (input$case_sensitive) {
         paste(
@@ -717,9 +677,6 @@ server <- function(input, output, session) {
     )
   })
 
-  # Rendering plots for the PSM viewer
-  
-  # Render plot for the ion cloud
   output$plot1 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -746,7 +703,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plot for mass error accuracy in ppm
   output$plot2 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -772,7 +728,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plot for peptide length distribution
   output$plot3 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -788,7 +743,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plot for charge state distribution
   output$plot4 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -804,7 +758,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plot for number of missed cleavages
   output$plot5 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -832,7 +785,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plot for uniqueness of peptides
   output$plot6 <- renderPlot({
     data() %>%
       dplyr::group_by(source_folder, is_unique) %>%
@@ -863,7 +815,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plot for hyerscore distribution
   output$plot7 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -887,7 +838,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plot for nextscore distribution
   output$plot8 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -911,7 +861,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plot for PeptideProphet probability distribution
   output$plot9 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -935,7 +884,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plot for expectation value distribution
   output$plot10 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -959,7 +907,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plot for assigned modifications
   output$plot11 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -994,7 +941,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plot for top 20 proteins with the most PSMs
   output$plot12 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -1020,10 +966,8 @@ server <- function(input, output, session) {
       )
   })
 
-  # count the number of PSMs by source folder
   output$plot13 <- renderPlot({
     req(data())
-    # Check if source_folder column exists
     if ("source_folder" %in% colnames(data())) {
       data() %>%
         count(source_folder, sort = TRUE) %>%
@@ -1046,7 +990,6 @@ server <- function(input, output, session) {
     }
   })
 
-  # GRAVY (Grand Average of Hydropathy)
   output$plot_gravy <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -1075,7 +1018,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Isoelectric point (pI)
   output$plot_pI <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -1094,9 +1036,7 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plot for Margalef's index
   output$plot_margalef <- renderPlot({
-  # Calculate Margalef's index by source folder
     margalef_data <- data() %>%
       as.data.frame() %>%
       dplyr::group_by(source_folder) %>%
@@ -1107,7 +1047,6 @@ server <- function(input, output, session) {
         .groups = "drop"
       )
   
-  # render the plot
   margalef_data %>%
     ggplot(aes(x = source_folder, y = margalef_index)) +
     geom_col(fill = input$plot_color, color = "black") +
@@ -1132,19 +1071,12 @@ server <- function(input, output, session) {
     )
   })
 
-  # Import and pre-process the uploaded protein.tsv files
-
-  # Reactive to store multiple PSM files
   multiple_protein_data <- eventReactive(input$load_protein_files, {
     req(input$protein_data_directory)
-
-    # Validate directory exists
     if (!dir.exists(input$protein_data_directory)) {
       showNotification("Directory does not exist!", type = "error")
       return(NULL)
     }
-
-    # Find all protein.tsv files recursively
     protein_files <- list.files(
       path = input$protein_data_directory,
       pattern = "^protein\\.tsv$",
@@ -1161,26 +1093,15 @@ server <- function(input, output, session) {
       paste("Found", length(protein_files), "protein files"),
       type = "message"
     )
-
-    # Load and combine all PSM files
     all_data <- NULL
 
     for (file_path in protein_files) {
       tryCatch(
         {
-          # Extract subfolder name (immediate parent directory)
           subfolder_name <- basename(dirname(file_path))
-
-          # Read the file
           protein_data <- readr::read_tsv(file_path, show_col_types = FALSE)
-
-          # Clean names
           protein_data <- janitor::clean_names(protein_data)
-
-          # Add source folder column
           protein_data$source_folder <- subfolder_name
-
-          # Combine with existing data
           if (is.null(all_data)) {
             all_data <- protein_data
           } else {
@@ -1198,8 +1119,6 @@ server <- function(input, output, session) {
 
     return(all_data)
   })
-
-  # Status output for multiple files
   output$protein_files_status <- renderText({
     if (input$load_protein_files == 0) {
       return("Click 'Load protein Files' to search for files")
@@ -1221,20 +1140,14 @@ server <- function(input, output, session) {
       "No protein files loaded"
     }
   })
-
-  # main data reactive
   data_protein <- reactive({
     protein_file <- NULL
-
-    # Try multiple files first
     if (input$load_protein_files > 0) {
       multi_data <- multiple_protein_data()
       if (!is.null(multi_data)) {
         protein_file <- multi_data
       }
     }
-
-    # Fall back to single file upload
     if (is.null(protein_file) && !is.null(input$protein)) {
       protein_file <- readr::read_tsv(
         input$protein$datapath,
@@ -1243,8 +1156,6 @@ server <- function(input, output, session) {
         janitor::clean_names() %>%
         mutate(source_folder = "single_upload")
     }
-
-    # Return NULL if no data
     if (is.null(protein_file)) {
       return(NULL)
     }
@@ -1252,7 +1163,6 @@ server <- function(input, output, session) {
     return(protein_file)
   })
 
-  # Information box to display the hyperscore filter
   output$info_box2 <- renderInfoBox({
     infoBox(
       "protein.tsv files contain FDR-filtered protein results, where each row is an identified protein group",
@@ -1261,8 +1171,6 @@ server <- function(input, output, session) {
     )
   })
 
-  # Render plots for the protein viewer
-  # Render plot for protein coverage
   output$plot14 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1276,7 +1184,6 @@ server <- function(input, output, session) {
       facet_wrap(~source_folder, scales = "free_y")
   })
 
-  # Render plot for number of proteins by organism (can be used to check the contaminants)
   output$plot15 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1301,7 +1208,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plot for protein existence evidence annotation
   output$plot16 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1341,7 +1247,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plots for ProteinProphet probability
   output$plot17 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1358,7 +1263,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plots for the best peptide probability of supporting peptides
   output$plot18 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1379,7 +1283,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plots for total peptides mapped to proteins
   output$plot19 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1396,7 +1299,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plots for razor spectral count
   output$plot20 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1417,7 +1319,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plots for razor intensity
   output$plot21 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1438,7 +1339,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Render plots for top 20 proteins with higher razor intensity
   output$plot22 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1461,7 +1361,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # Import and pre-process the uploaded combined_protein.tsv file
   combined_protein_data <- reactive({
     req(input$combined_protein)
     combined_protein_file <- readr::read_tsv(
@@ -1474,7 +1373,6 @@ server <- function(input, output, session) {
       log2()
   })
 
-  # Observe the uploaded file and update selectInput choices
   observe({
     req(combined_protein_data())
     colnames <- colnames(combined_protein_data())
@@ -1482,8 +1380,6 @@ server <- function(input, output, session) {
     updateSelectInput(session, "ycol", choices = colnames)
   })
 
-  # Render plots for the combined protein data
-  # Render plot for the distribution of MaxLFQ intensity
   output$plot26 <- renderPlot({
     combined_protein_data() %>%
       as.data.frame() %>%
@@ -1512,7 +1408,6 @@ server <- function(input, output, session) {
       theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   })
 
-  # Render scatter plot for sample correlation
   output$plot27 <- renderPlotly({
     combined_protein_data() %>%
       as.data.frame() %>%
@@ -1525,7 +1420,6 @@ server <- function(input, output, session) {
       )
   })
 
-  # calculate the cosine similarity in the matrix and plot the heatmap
   output$cosine_similarity <- renderPlot({
     combined_protein_data() %>%
       as.matrix() %>%
@@ -1549,7 +1443,6 @@ server <- function(input, output, session) {
       labs(x = NULL, y = NULL, fill = "Cosine similarity")
   })
 
-  # calculate the euclidean distance in the matrix and plot the heatmap
   output$euclidean_distance <- renderPlot({
     combined_protein_data() %>%
       t() %>%
@@ -1573,7 +1466,6 @@ server <- function(input, output, session) {
       labs(x = NULL, y = NULL, fill = "Euclidean distance")
   })
 
-  # calculate the Jaccard similarity in the matrix and plot the heatmap
   output$jaccard_similarity <- renderPlot({
     combined_protein_data() %>%
       t() %>%
@@ -1598,5 +1490,4 @@ server <- function(input, output, session) {
   })
 }
 
-# Run the application
 shinyApp(ui, server)
