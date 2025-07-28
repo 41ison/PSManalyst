@@ -2,19 +2,32 @@
 
 ## Dashboard for PSM and protein information visualization from FragPipe search
 
-This is a shiny application that takes the psm.tsv, protein.tsv and combined_protein.tsv files from the FragPipe search and renders them into graphs for quick visualization of your results. To switch between PSM and Protein visualization, you just need to click on the **PSM viewer** or **Protein viewer** buttons. In the **PSM viewer** panel you have the option to filter the PSMs by hyperscore. Please, see the [FragPipe](https://fragpipe.nesvilab.org/docs/tutorial_fragpipe_outputs.html) documentation to have a complete understanding of the outputs.
+This is a shiny application that takes the psm.tsv, protein.tsv and combined_protein.tsv files from the FragPipe search and renders them into graphs for quick visualization of your results. To switch between PSM and Protein visualization, you just need to click on the **PSM viewer** or **Protein viewer** buttons. In the **PSM viewer** panel you have the option to filter the PSMs by hyperscore and peptideProphet probability scores.
 
-Important: You need the following libraries in order to run the App:
+There are two versions of PSManalyst shiny app:
+- PSManalyst: this is the single psm.tsv evaluation version (some analysis are only available in this version, e.g. PICS fingerprint).
+- PSManalyst_MB: this is the multi-batch psm.tsv evaluation version (you only need the path to the subfolders e all the psm and protein files will be automatically loaded).
+
+Please, see the [FragPipe](https://fragpipe.nesvilab.org/docs/tutorial_fragpipe_outputs.html) documentation to have a complete understanding of the outputs.
+
+PSManalyst have the instruction to install all required libraries at the first use:
 
 ```r
-library(shiny)            # from CRAN
-library(shinydashboard)   # from CRAN
-library(tidyverse)        # from CRAN
-library(janitor)          # from CRAN
-library(ggseqlogo)        # from CRAN
-library(ggpointdensity)   # from GitHub
-library(wordcloud2)       # from GitHub
-library(ggtext)           # from CRAN
+library(shiny) # from CRAN
+library(shinydashboard) # from CRAN
+library(tidyverse) # from CRAN
+library(janitor) # from CRAN
+library(ggseqlogo) # from CRAN
+library(ggpointdensity) # from CRAN
+library(wordcloud2) # from GitHub
+library(ggtext) # from CRAN
+library(lsa) # from CRAN
+library(plotly) # from CRAN
+library(viridis) # from CRAN
+library(ggfortify) # from CRAN
+library(vegan) # from CRAN
+library(ggwordcloud) # from CRAN
+library(colourpicker) # from CRAN
 ```
 
 Each visualization focuses on a specific aspect of the proteomics data:
