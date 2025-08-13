@@ -47,5 +47,5 @@ Each visualization focuses on a specific aspect of the proteomics data:
 - **Similarity metrics:** Heatmaps of various similarity metrics between samples
 
 <p align = "center">
-<img src = "https://github.com/41ison/PSManalyst/blob/main/Screenshot%20PSManalyst.png" width = "1000">
+<img src = "https://github.com/41ison/PSManalyst/blob/main/Screenshot_PSManalyst.png" width = "1000">
 </p>
