@@ -1,5 +1,8 @@
 # PSM Analyst for FragPipe (PSManalyst)
 
+If you use PSManalyst, please consider citing the following publication:
+> Chaves, AFA. PSManalyst: A Dashboard for Visual Quality Control of FragPipe Results. Journal of Proteome Research. 2025 [https://doi.org/10.1021/acs.jproteome.5c00557](https://pubs.acs.org/doi/10.1021/acs.jproteome.5c00557).
+
 ## Dashboard for PSM and protein information visualization from FragPipe search
 
 This is a shiny application that takes the psm.tsv, protein.tsv and combined_protein.tsv files from the FragPipe search and renders them into graphs for quick visualization of your results. To switch between PSM and Protein visualization, you just need to click on the **PSM viewer** or **Protein viewer** buttons. In the **PSM viewer** panel you have the option to filter the PSMs by hyperscore and peptideProphet probability scores.
