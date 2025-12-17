@@ -1,7 +1,7 @@
 # PSM Analyst for FragPipe (PSManalyst)
 
 If you use PSManalyst, please consider citing the following publication:
-> Chaves, AFA. PSManalyst: A Dashboard for Visual Quality Control of FragPipe Results. Journal of Proteome Research. 2025 [https://doi.org/10.1021/acs.jproteome.5c00557](https://pubs.acs.org/doi/10.1021/acs.jproteome.5c00557).
+> Chaves AFA. PSManalyst: A Dashboard for Visual Quality Control of FragPipe Results. J Proteome Res. 2025 Sep 5;24(9):4344-4346. [doi: 10.1021/acs.jproteome.5c00557.](https://pubs.acs.org/doi/10.1021/acs.jproteome.5c00557) Epub 2025 Aug 15. PMID: 40815682.
 
 ## Dashboard for PSM and protein information visualization from FragPipe search
 
@@ -13,7 +13,7 @@ There are two versions of PSManalyst shiny app:
 
 Please, see the [FragPipe](https://fragpipe.nesvilab.org/docs/tutorial_fragpipe_outputs.html) documentation to have a complete understanding of the outputs.
 
-PSManalyst have the instruction to install all required libraries at the first use:
+PSManalyst have the instruction to install all the required libraries at the first use:
 
 ```r
 library(shiny) # from CRAN
@@ -33,21 +33,7 @@ library(ggwordcloud) # from CRAN
 library(colourpicker) # from CRAN
 ```
 
-Each visualization focuses on a specific aspect of the proteomics data:
-
-- **Protease fingerprint:** Heatmap of amino acid frequencies at cleavage sites
-- **Peptide length distribution:** Density plot of peptide lengths
-- **N/C-termini SeqLogo:** Sequence logo visualizations
-- **GRAVY index:** Grand average of hydropathicity for peptide sequences
-- **Isoelectric point:** Isoelectric point distribution for peptide sequences
-- **Charge state distribution:** Bar chart of charge states
-- **m/z over retention time:** Point density plot
-- **Missed cleavages:** Bar chart of missed cleavage counts
-- **Mass error:** Scatter plot of mass errors
-- **Score distributions:** Histograms of various scoring metrics
-- **Protein coverage:** Histogram of protein coverage percentages
-- **Sample correlation:** Scatter plot of intensity correlations between samples
-- **Similarity metrics:** Heatmaps of various similarity metrics between samples
+FragPipe is recognized as one of the fastest computational platforms in proteomics, making it a practical solution for the rapid quality control of high-throughput sample analyses. Starting with version 23.0, FragPipe introduced the “Generate Summary Report” feature, offering .pdf reports with essential quality control metrics to address the challenge of intuitively assessing large-scale proteomics data. While traditional spreadsheet formats (e.g., tsv files) are accessible, the complexity of the data often limits user-friendly interpretation. To further enhance accessibility, PSManalyst, a Shiny-based R application, was developed to process FragPipe output files (psm.tsv, protein.tsv, and combined_protein.tsv) and provide interactive, code-free data visualization. Users can filter peptide-spectrum matches (PSMs) by quality scores, visualize protease cleavage fingerprints as heatmaps and SeqLogos, and access a range of quality control metrics and representations such as peptide length distributions, ion densities, mass errors, and wordclouds for overrepresented peptides. The tool facilitates seamless switching between PSM and protein data visualization, offering insights into protein abundance discrepancies, samplewise similarity metrics, protein coverage, and contaminants evaluation. PSManalyst leverages several R libraries (lsa, vegan, ggfortify, ggseqlogo, wordcloud2, tidyverse, ggpointdensity, and plotly) and runs on Windows, MacOS, and Linux, requiring only a local R setup and an IDE.
 
 <p align = "center">
 <img src = "https://github.com/41ison/PSManalyst/blob/main/Screenshot_PSManalyst.png" width = "1000">
