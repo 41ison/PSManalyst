@@ -1,22 +1,10 @@
-## PSM analyst dashboard for FragPipe search results
-## The input are psm.tsv, protein.tsv and combined_protein.tsv files
-## It is possible to filter the PSMs by the hyperscore and PeptideProphet probability, as well as for enzymatic specificity
-## You can remove a contaminant organism as well
-## You can customize the color of most of the plots and download all the PSM plots in high resolution
+## The psm.tsv, protein.tsv and combined_protein.tsv files are the inputs for the PSManalyst dashboard
+## The user can filter PSMs by the hyperscore and PeptideProphet probability, as well as by enzymatic specificity
+## The user can remove a contaminant organism as well
+## Chaves AFA. PSManalyst: A Dashboard for Visual Quality Control of FragPipe Results. J Proteome Res. 2025 Sep 5;24(9):4344-4346. doi: 10.1021/acs.jproteome.5c00557. Epub 2025 Aug 15. PMID: 40815682.
 
 CRAN_packages <- c(
-  "shiny",
-  "shinydashboard",
-  "tidyverse",
-  "janitor",
-  "ggseqlogo",
-  "ggtext",
-  "lsa",
-  "vegan",
-  "plotly",
-  "viridis",
-  "ggfortify",
-  "colourpicker"
+  "shiny", "shinydashboard", "tidyverse", "janitor", "ggseqlogo", "ggtext", "lsa", "vegan", "plotly", "viridis", "ggfortify", "colourpicker"
 )
 not_installed_CRAN <- CRAN_packages[
   !(CRAN_packages %in% installed.packages()[, "Package"])
@@ -66,26 +54,7 @@ aa_freq <- function(x) {
 
 complete_and_reorder_amino_acids <- function(element) {
   twenty_amino_acids <- c(
-    'A',
-    'C',
-    'D',
-    'E',
-    'F',
-    'G',
-    'H',
-    'I',
-    'K',
-    'L',
-    'M',
-    'N',
-    'P',
-    'Q',
-    'R',
-    'S',
-    'T',
-    'V',
-    'W',
-    'Y'
+    'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y'
   )
 
   for (amino_acid in twenty_amino_acids) {
@@ -98,7 +67,6 @@ complete_and_reorder_amino_acids <- function(element) {
   return(element)
 }
 
-# Extract the matrix of amino acid frequencies
 extract_matrix <- function(data) {
   fingerprint_protease <- c(data$fingerprint_Nterm, data$fingerprint_Cterm) %>%
     na.omit() %>%
@@ -113,36 +81,10 @@ extract_matrix <- function(data) {
   final_matrix <- matrix(unlist(new_list), ncol = 8, byrow = FALSE)
 
   colnames(final_matrix) <- c(
-    "P4",
-    "P3",
-    "P2",
-    "P1",
-    "P1'",
-    "P2'",
-    "P3'",
-    "P4'"
+    "P4", "P3", "P2", "P1", "P1'", "P2'", "P3'", "P4'"
   )
   rownames(final_matrix) <- c(
-    "A",
-    "C",
-    "D",
-    "E",
-    "F",
-    "G",
-    "H",
-    "I",
-    "K",
-    "L",
-    "M",
-    "N",
-    "P",
-    "Q",
-    "R",
-    "S",
-    "T",
-    "V",
-    "W",
-    "Y"
+    "A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y"
   )
 
   return(final_matrix)
@@ -152,26 +94,7 @@ extract_matrix <- function(data) {
 # Ref: Kyte J, Doolittle RF. A simple method for displaying the hydropathic character of a protein. J Mol Biol. 1982 May 5;157(1):105-32. doi: 10.1016/0022-2836(82)90515-0
 GRAVY <- function(sequence) {
   hydropathy_index <- c(
-    A = 1.8,
-    R = -4.5,
-    N = -3.5,
-    D = -3.5,
-    C = 2.5,
-    Q = -3.5,
-    E = -3.5,
-    G = -0.4,
-    H = -3.2,
-    I = 4.5,
-    L = 3.8,
-    K = -3.9,
-    M = 1.9,
-    F = 2.8,
-    P = -1.6,
-    S = -0.8,
-    T = -0.7,
-    W = -0.9,
-    Y = -1.3,
-    V = 4.2
+    A = 1.8, R = -4.5, N = -3.5, D = -3.5, C = 2.5, Q = -3.5, E = -3.5, G = -0.4, H = -3.2, I = 4.5, L = 3.8, K = -3.9, M = 1.9, F = 2.8, P = -1.6, S = -0.8, T = -0.7, W = -0.9, Y = -1.3, V = 4.2
   )
   scores <- sapply(strsplit(sequence, NULL)[[1]], function(aa) {
     hydropathy_index[aa]
@@ -180,28 +103,7 @@ GRAVY <- function(sequence) {
 }
 
 calculate_pI <- function(sequence) {
-  pKa_values <- c(
-    A = 2.34,
-    R = 12.48,
-    N = 10.76,
-    D = 3.86,
-    C = 8.33,
-    Q = 10.76,
-    E = 4.25,
-    G = 2.34,
-    H = 6.00,
-    I = 6.04,
-    L = 6.04,
-    K = 9.74,
-    M = 5.74,
-    F = 5.48,
-    P = 1.99,
-    S = 2.21,
-    T = 2.15,
-    W = 9.39,
-    Y = 10.07,
-    V = 6.02
-  )
+  pKa_values <- c(A = 2.34, R = 12.48, N = 10.76, D = 3.86, C = 8.33, Q = 10.76, E = 4.25, G = 2.34, H = 6.00, I = 6.04, L = 6.04, K = 9.74, M = 5.74, F = 5.48, P = 1.99, S = 2.21, T = 2.15, W = 9.39, Y = 10.07, V = 6.02)
 
   pI <- mean(
     sapply(strsplit(sequence, NULL)[[1]], function(aa) pKa_values[aa]),
@@ -211,15 +113,432 @@ calculate_pI <- function(sequence) {
   return(pI)
 }
 
-color_blue_seq <- c(
-  "#d4e6f1",
-  "#a9cce3",
-  "#7fb3d5",
-  "#5499c7",
-  "#2980b9",
-  "#1f618d",
-  "#154360"
-)
+color_blue_seq <- c("#d4e6f1", "#a9cce3", "#7fb3d5", "#5499c7", "#2980b9", "#1f618d", "#154360")
+
+# Function to calculate amino acid co-occurrence matrix
+analyze_terminus_cooccurrence <- function(
+  df,
+  peptide_col,
+  show_values = FALSE
+) {
+  amino_acids <- c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y")
+  terminus_data <- df %>%
+    dplyr::filter(
+      !is.na(.data[[peptide_col]]) & nchar(.data[[peptide_col]]) > 0
+    ) %>%
+    dplyr::mutate(
+      N_terminus = substr(.data[[peptide_col]], 1, 1),
+      C_terminus = substr(
+        .data[[peptide_col]],
+        nchar(.data[[peptide_col]]),
+        nchar(.data[[peptide_col]])
+      )
+    ) %>%
+    dplyr::filter(N_terminus %in% amino_acids & C_terminus %in% amino_acids)
+  contingency_table <- table(terminus_data$N_terminus, terminus_data$C_terminus)
+  total_peptides <- sum(contingency_table)
+  prob_matrix <- contingency_table / total_peptides
+  full_matrix <- matrix(
+    0,
+    nrow = length(amino_acids),
+    ncol = length(amino_acids),
+    dimnames = list(amino_acids, amino_acids)
+  )
+
+  for (i in rownames(contingency_table)) {
+    for (j in colnames(contingency_table)) {
+      full_matrix[i, j] <- prob_matrix[i, j]
+    }
+  }
+
+  heatmap_data <- expand.grid(
+    N_terminus = rownames(full_matrix),
+    C_terminus = colnames(full_matrix)
+  ) %>%
+    mutate(
+      Probability = as.vector(full_matrix),
+      N_terminus = factor(N_terminus, levels = rownames(full_matrix)),
+      C_terminus = factor(C_terminus, levels = colnames(full_matrix))
+    )
+
+  p <- ggplot(
+    heatmap_data,
+    aes(x = C_terminus, y = N_terminus, fill = Probability)
+  ) +
+    geom_tile(color = "white", size = 0.1) +
+    scale_fill_gradient2(
+      low = "white",
+      mid = "#B8E6D9",
+      high = "#1BB99A",
+      midpoint = max(heatmap_data$Probability) / 2,
+      name = "Probability"
+    ) +
+    labs(
+      title = "N:C-terminus co-occurrence",
+      x = "C-terminus AA",
+      y = "N-terminus AA"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
+      axis.text.x = element_text(
+        hjust = 0.5,
+        size = 10,
+        face = "bold",
+        color = "black"
+      ),
+      axis.text.y = element_text(size = 10, face = "bold", color = "black"),
+      axis.title = element_text(size = 12, face = "bold"),
+      legend.title = element_text(size = 10, face = "bold", hjust = 0.5),
+      legend.title.position = "top",
+      legend.text = element_text(size = 10, face = "bold"),
+      legend.key.height = unit(0.25, "cm"),
+      legend.key.width = unit(1, "cm"),
+      legend.position = "bottom",
+      panel.border = element_rect(color = "black", fill = NA)
+    ) +
+    coord_fixed()
+
+  if (show_values) {
+    p <- p +
+      geom_text(
+        aes(label = sprintf("%.3f", Probability)),
+        size = 2,
+        color = "black"
+      )
+  }
+
+  return(list(
+    matrix = full_matrix,
+    plot = p,
+    total_peptides = total_peptides,
+    summary_stats = list(
+      min_prob = min(full_matrix[full_matrix > 0]),
+      max_prob = max(full_matrix),
+      mean_prob = mean(full_matrix[full_matrix > 0]),
+      n_observed_pairs = sum(full_matrix > 0)
+    )
+  ))
+}
+
+analyze_modification_type <- function(
+  data,
+  rt_threshold_insource = 0.5,
+  rt_threshold_real = 1.5,
+  min_observations = 3
+) {
+  mod_patterns <- list(
+    H2O_loss = "-18\\.0106",
+    NH3_loss = "-17\\.0265",
+    Oxidation = "15\\.9949",
+    Deamidation = "0\\.9840"
+  )
+  modified_psms <- data %>%
+    dplyr::filter(str_detect(
+      assigned_modifications,
+      paste(unlist(mod_patterns), collapse = "|")
+    )) %>%
+    dplyr::mutate(
+      mod_type = case_when(
+        str_detect(assigned_modifications, mod_patterns$H2O_loss) ~ "H2O_loss",
+        str_detect(assigned_modifications, mod_patterns$NH3_loss) ~ "NH3_loss",
+        str_detect(
+          assigned_modifications,
+          mod_patterns$Oxidation
+        ) ~ "Oxidation",
+        str_detect(
+          assigned_modifications,
+          mod_patterns$Deamidation
+        ) ~ "Deamidation",
+        TRUE ~ "other"
+      ),
+      retention_min = retention / 60,
+      base_peptide = str_remove_all(peptide, "\\[.*?\\]")
+    ) %>%
+    dplyr::filter(mod_type != "other")
+
+  unmodified_psms <- data %>%
+    dplyr::filter(
+      assigned_modifications == "" | is.na(assigned_modifications)
+    ) %>%
+    dplyr::mutate(
+      retention_min = retention / 60,
+      base_peptide = str_remove_all(peptide, "\\[.*?\\]")
+    ) %>%
+    dplyr::select(base_peptide, retention_min, intensity) %>%
+    rename(unmod_rt = retention_min, unmod_intensity = intensity)
+
+  modified_stats <- modified_psms %>%
+    group_by(base_peptide, mod_type) %>%
+    summarise(
+      n_modified = n(),
+      median_mod_rt = median(retention_min),
+      mean_mod_rt = mean(retention_min),
+      sd_mod_rt = sd(retention_min),
+      rt_range_mod = max(retention_min) - min(retention_min),
+      cv_mod_rt = sd(retention_min) / mean(retention_min) * 100,
+      mean_intensity_mod = mean(intensity, na.rm = TRUE),
+      .groups = "drop"
+    )
+
+  unmodified_stats <- unmodified_psms %>%
+    group_by(base_peptide) %>%
+    summarise(
+      n_unmodified = n(),
+      median_unmod_rt = median(unmod_rt),
+      mean_unmod_rt = mean(unmod_rt),
+      sd_unmod_rt = sd(unmod_rt),
+      rt_range_unmod = max(unmod_rt) - min(unmod_rt),
+      cv_unmod_rt = sd(unmod_rt) / mean(unmod_rt) * 100,
+      mean_intensity_unmod = mean(unmod_intensity, na.rm = TRUE),
+      .groups = "drop"
+    )
+
+  rt_shift_analysis <- modified_stats %>%
+    inner_join(unmodified_stats, by = c("base_peptide")) %>%
+    dplyr::filter(
+      n_modified >= min_observations,
+      n_unmodified >= min_observations
+    ) %>%
+    dplyr::mutate(
+      rt_shift = median_mod_rt - median_unmod_rt,
+      abs_rt_shift = abs(rt_shift),
+      rel_rt_shift = (rt_shift / median_unmod_rt) * 100,
+      total_rt_variability = rt_range_mod + rt_range_unmod,
+      shift_to_variability_ratio = abs_rt_shift / (total_rt_variability + 0.01),
+      intensity_ratio = mean_intensity_mod / mean_intensity_unmod,
+      classification = case_when(
+        abs_rt_shift <= rt_threshold_insource &
+          shift_to_variability_ratio < 2 ~ "Likely in-source loss",
+        abs_rt_shift >= rt_threshold_real &
+          shift_to_variability_ratio > 3 ~ "Likely real modification",
+        TRUE ~ "Ambiguous"
+      ),
+      expected_behavior = case_when(
+        mod_type %in% c("H2O_loss", "NH3_loss") ~ "In-source loss",
+        mod_type %in% c("Oxidation", "Deamidation") ~ "Real modification",
+        TRUE ~ "Unknown"
+      ),
+      classification_agreement = classification ==
+        paste("Likely", expected_behavior)
+    )
+
+  summary_by_mod <- rt_shift_analysis %>%
+    group_by(mod_type, classification) %>%
+    summarise(
+      n_peptides = n(),
+      median_abs_shift = median(abs_rt_shift),
+      mean_abs_shift = mean(abs_rt_shift),
+      median_rel_shift = median(abs(rel_rt_shift)),
+      median_shift_var_ratio = median(shift_to_variability_ratio),
+      median_intensity_ratio = median(intensity_ratio),
+      .groups = "drop"
+    ) %>%
+    arrange(mod_type, classification)
+
+  p1 <- ggplot(
+    rt_shift_analysis,
+    aes(x = mod_type, y = abs_rt_shift, fill = classification)
+  ) +
+    geom_boxplot(outlier.alpha = 0.3) +
+    geom_hline(
+      yintercept = rt_threshold_insource,
+      linetype = "dashed",
+      color = "blue",
+      linewidth = 0.8
+    ) +
+    geom_hline(
+      yintercept = rt_threshold_real,
+      linetype = "dashed",
+      color = "red",
+      linewidth = 0.8
+    ) +
+    scale_fill_manual(
+      values = c(
+        "Likely in-source loss" = "#4CAF50",
+        "Likely real modification" = "#F44336",
+        "Ambiguous" = "#FFC107"
+      )
+    ) +
+    labs(
+      title = "RT shifts: modified vs unmodified peptides",
+      caption = paste(
+        "Blue line: in-source threshold (",
+        rt_threshold_insource,
+        " min), ",
+        "Red line: real modification threshold (",
+        rt_threshold_real,
+        " min)",
+        sep = ""
+      ),
+      x = "Modification type",
+      y = "Absolute RT shift (min)",
+      fill = "Classification"
+    ) +
+    theme_bw() +
+    theme(
+      plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
+      axis.text.x = element_text(
+        size = 10,
+        face = "bold",
+        color = "black",
+        angle = 45,
+        hjust = 1
+      ),
+      axis.text.y = element_text(size = 10, face = "bold", color = "black"),
+      axis.title = element_text(size = 12, face = "bold"),
+      legend.title = element_text(size = 10, face = "bold", hjust = 0.5),
+      legend.title.position = "top",
+      legend.text = element_text(size = 10, face = "bold"),
+      legend.position = "bottom",
+      panel.border = element_rect(color = "black", fill = NA)
+    )
+
+  p2 <- ggplot(
+    rt_shift_analysis,
+    aes(
+      x = total_rt_variability,
+      y = abs_rt_shift,
+      color = mod_type,
+      shape = classification
+    )
+  ) +
+    geom_point(size = 3, alpha = 0.6) +
+    geom_abline(slope = 2, intercept = 0, linetype = "dashed", color = "blue") +
+    geom_abline(slope = 3, intercept = 0, linetype = "dashed", color = "red") +
+    scale_shape_manual(
+      values = c(
+        "Likely in-source loss" = 16,
+        "Likely real modification" = 17,
+        "Ambiguous" = 15
+      )
+    ) +
+    scale_color_manual(
+      values = c(
+        "H2O_loss" = "#1f77b4",
+        "NH3_loss" = "#ff7f0e",
+        "Oxidation" = "#2ca02c",
+        "Deamidation" = "#d62728"
+      )
+    ) +
+    labs(
+      title = "RT shift vs total RT variability",
+      caption = "Ratios > 3 suggest real modifications; < 2 suggest in-source losses",
+      x = "Total RT variability (min)",
+      y = "Absolute RT shift (min)",
+      color = "Modification type",
+      shape = "Classification"
+    ) +
+    theme_bw() +
+    theme(
+      plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
+      axis.text = element_text(size = 10, face = "bold", color = "black"),
+      axis.title = element_text(size = 12, face = "bold"),
+      legend.title = element_text(size = 10, face = "bold", hjust = 0.5),
+      legend.title.position = "top",
+      legend.text = element_text(size = 10, face = "bold"),
+      legend.position = "bottom",
+      panel.border = element_rect(color = "black", fill = NA)
+    )
+
+  p3 <- ggplot(
+    rt_shift_analysis,
+    aes(
+      x = round(log10(intensity_ratio), 1),
+      y = abs_rt_shift,
+      color = classification
+    )
+  ) +
+    geom_point(size = 2, alpha = 0.6) +
+    facet_wrap(~mod_type, scales = "free") +
+    geom_hline(
+      yintercept = rt_threshold_insource,
+      linetype = "dashed",
+      alpha = 0.5
+    ) +
+    geom_hline(
+      yintercept = rt_threshold_real,
+      linetype = "dashed",
+      alpha = 0.5
+    ) +
+    scale_color_manual(
+      values = c(
+        "Likely in-source Loss" = "#4CAF50",
+        "Likely real modification" = "#F44336",
+        "Ambiguous" = "#FFC107"
+      )
+    ) +
+    labs(
+      title = "RT shift vs intensity ratio by modification type",
+      x = "log<sub>10</sub>(intensity ratio: modified/unmodified)",
+      y = "Absolute RT shift (minutes)",
+      color = "Classification"
+    ) +
+    theme_bw() +
+    theme(
+      plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
+      axis.text = element_text(size = 10, face = "bold", color = "black"),
+      axis.title = element_markdown(size = 12, face = "bold"),
+      legend.title = element_text(size = 10, face = "bold", hjust = 0.5),
+      legend.title.position = "top",
+      legend.text = element_text(size = 10, face = "bold"),
+      legend.position = "bottom",
+      panel.border = element_rect(color = "black", fill = NA),
+      strip.background = element_blank(),
+      strip.text = element_text(size = 12, face = "bold")
+    )
+
+  classification_summary <- rt_shift_analysis %>%
+    group_by(mod_type, classification, expected_behavior) %>%
+    summarise(count = n(), .groups = "drop")
+
+  p4 <- ggplot(
+    classification_summary,
+    aes(x = mod_type, y = count, fill = classification)
+  ) +
+    geom_bar(stat = "identity", position = "dodge") +
+    geom_text(
+      aes(label = count),
+      position = position_dodge(width = 0.9),
+      vjust = -0.5
+    ) +
+    scale_fill_manual(
+      values = c(
+        "Likely in-source loss" = "#4CAF50",
+        "Likely real modification" = "#F44336",
+        "Ambiguous" = "#FFC107"
+      )
+    ) +
+    labs(
+      title = "Classification summary by modification type",
+      x = "Modification type",
+      y = "Number of peptides",
+      fill = "Classification"
+    ) +
+    theme_bw() +
+    theme(
+      plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
+      axis.text = element_text(size = 10, face = "bold", color = "black"),
+      axis.title = element_markdown(size = 12, face = "bold"),
+      legend.title = element_text(size = 10, face = "bold", hjust = 0.5),
+      legend.title.position = "top",
+      legend.text = element_text(size = 10, face = "bold"),
+      legend.position = "bottom",
+      panel.border = element_rect(color = "black", fill = NA),
+      axis.text.x = element_text(angle = 45, hjust = 1)
+    )
+
+  list(
+    rt_shift_data = rt_shift_analysis,
+    summary_by_modification = summary_by_mod,
+    plots = list(
+      rt_shift_boxplot = p1,
+      shift_vs_variability = p2,
+      shift_vs_intensity = p3,
+      classification_summary = p4
+    )
+  )
+}
 
 ui <- dashboardPage(
   dashboardHeader(
@@ -228,9 +547,13 @@ ui <- dashboardPage(
     dropdownMenu(
       type = "messages",
       messageItem(
-        from = "Support",
-        message = "felipealison@gmail.com",
-        icon = icon("envelope")
+        from = "Communication",
+        message = tags$a(
+          "doi: 10.1021/acs.jproteome.5c00557",
+          href = "https://pubs.acs.org/doi/10.1021/acs.jproteome.5c00557",
+          target = "_blank"
+        ),
+        icon = icon("file-lines")
       )
     )
   ),
@@ -447,6 +770,48 @@ ui <- dashboardPage(
             solidHeader = TRUE,
             plotOutput("plot18"),
             collapsible = TRUE
+          ),
+          box(
+            title = "Co-occurrence probability matrix of N- and C-terminus AA",
+            status = "primary",
+            solidHeader = TRUE,
+            plotOutput("plot19"),
+            collapsible = TRUE
+          ),
+          box(
+            title = "Cysteine counts in peptides",
+            status = "primary",
+            solidHeader = TRUE,
+            plotOutput("plot20"),
+            collapsible = TRUE
+          ),
+          box(
+            title = "RT shift distribution by modification type",
+            status = "primary",
+            solidHeader = TRUE,
+            plotOutput("plot21"),
+            collapsible = TRUE
+          ),
+          box(
+            title = "Shift-to-variability ratio",
+            status = "primary",
+            solidHeader = TRUE,
+            plotOutput("plot22"),
+            collapsible = TRUE
+          ),
+          box(
+            title = "RT shift vs intensity ratio",
+            status = "primary",
+            solidHeader = TRUE,
+            plotOutput("plot23"),
+            collapsible = TRUE
+          ),
+          box(
+            title = "Classification summary of modification types",
+            status = "primary",
+            solidHeader = TRUE,
+            plotOutput("plot24"),
+            collapsible = TRUE
           )
         )
       ),
@@ -459,70 +824,70 @@ ui <- dashboardPage(
             title = "Protein coverage",
             status = "primary",
             solidHeader = TRUE,
-            plotOutput("plot19"),
+            plotOutput("plot01p"),
             collapsible = TRUE
           ),
           box(
             title = "Number of proteins by organim",
             status = "primary",
             solidHeader = TRUE,
-            plotOutput("plot20"),
+            plotOutput("plot02p"),
             collapsible = TRUE
           ),
           box(
             title = "Protein existence evidence",
             status = "primary",
             solidHeader = TRUE,
-            plotOutput("plot21"),
+            plotOutput("plot03p"),
             collapsible = TRUE
           ),
           box(
             title = "Protein probability (ProteinProphet)",
             status = "primary",
             solidHeader = TRUE,
-            plotOutput("plot22"),
+            plotOutput("plot04p"),
             collapsible = TRUE
           ),
           box(
             title = "Top Peptide Probability",
             status = "primary",
             solidHeader = TRUE,
-            plotOutput("plot23"),
+            plotOutput("plot05p"),
             collapsible = TRUE
           ),
           box(
             title = "Total peptides mapped to the proteins",
             status = "primary",
             solidHeader = TRUE,
-            plotOutput("plot24"),
+            plotOutput("plot06p"),
             collapsible = TRUE
           ),
           box(
             title = "Razor spectral count",
             status = "primary",
             solidHeader = TRUE,
-            plotOutput("plot25"),
+            plotOutput("plot07p"),
             collapsible = TRUE
           ),
           box(
             title = "Razor intensity",
             status = "primary",
             solidHeader = TRUE,
-            plotOutput("plot26"),
+            plotOutput("plot08p"),
             collapsible = TRUE
           ),
           box(
             title = "Top 20 proteins with higher razor intensity",
             status = "primary",
             solidHeader = TRUE,
-            plotOutput("plot27"),
+            plotOutput("plot09p"),
             collapsible = TRUE
           ),
           box(
             title = "MaxLFQ intensity distribution",
             status = "primary",
             solidHeader = TRUE,
-            plotOutput("plot28"),
+            plotOutput("plot10p"),
             collapsible = TRUE
           ),
           box(
@@ -530,7 +895,7 @@ ui <- dashboardPage(
             status = "primary",
             height = 600,
             solidHeader = TRUE,
-            plotlyOutput("plot29"),
+            plotlyOutput("plot11p"),
             collapsible = FALSE
           ),
           tabBox(
@@ -660,6 +1025,21 @@ server <- function(input, output, session) {
     extract_matrix(data())
   })
 
+  cooccurrence_data <- reactive({
+    req(data())
+    analyze_terminus_cooccurrence(data(), "peptide", show_values = TRUE)
+  })
+
+  rt_loss_analysis <- reactive({
+    req(data())
+    data() %>%
+      analyze_modification_type(
+        rt_threshold_insource = 0.5,
+        rt_threshold_real = 1.5,
+        min_observations = 3
+      )
+  })
+
   # Render plots for the PSM viewer
   output$plot01 <- renderPlot({
     frequency_matrix_of_aa() %>%
@@ -677,28 +1057,7 @@ server <- function(input, output, session) {
         ),
         residue = factor(
           residue,
-          c(
-            "A",
-            "C",
-            "D",
-            "E",
-            "F",
-            "G",
-            "H",
-            "I",
-            "K",
-            "L",
-            "M",
-            "N",
-            "P",
-            "Q",
-            "R",
-            "S",
-            "T",
-            "V",
-            "W",
-            "Y"
-          )
+          c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y")
         )
       ) %>%
       ggplot(aes(x = position, y = residue, fill = frequency)) +
@@ -754,16 +1113,7 @@ server <- function(input, output, session) {
       geom_vline(xintercept = 4.5, color = "black", linetype = "dashed") +
       scale_x_continuous(
         breaks = c(1, 2, 3, 4, 5, 6, 7, 8),
-        labels = c(
-          "1" = "P4",
-          "2" = "P3",
-          "3" = "P2",
-          "4" = "P1",
-          "5" = "P1'",
-          "6" = "P2'",
-          "7" = "P3'",
-          "8" = "P4'"
-        )
+        labels = c("1" = "P4", "2" = "P3", "3" = "P2", "4" = "P1", "5" = "P1'", "6" = "P2'", "7" = "P3'", "8" = "P4'")
       ) +
       labs(
         title = "SeqLogo of the N-termini fingerprint",
@@ -794,16 +1144,7 @@ server <- function(input, output, session) {
       geom_vline(xintercept = 4.5, color = "black", linetype = "dashed") +
       scale_x_continuous(
         breaks = c(1, 2, 3, 4, 5, 6, 7, 8),
-        labels = c(
-          "1" = "P4",
-          "2" = "P3",
-          "3" = "P2",
-          "4" = "P1",
-          "5" = "P1'",
-          "6" = "P2'",
-          "7" = "P3'",
-          "8" = "P4'"
-        )
+        labels = c("1" = "P4", "2" = "P3", "3" = "P2", "4" = "P1", "5" = "P1'", "6" = "P2'", "7" = "P3'", "8" = "P4'")
       ) +
       labs(
         title = "SeqLogo of the C-termini fingerprint",
@@ -1071,6 +1412,43 @@ server <- function(input, output, session) {
       )
   })
 
+  output$plot19 <- renderPlot({
+    cooccurrence_data()[["plot"]]
+  })
+
+  output$plot20 <- renderPlot({
+    data() %>%
+      as.data.frame() %>%
+      dplyr::mutate(cysteine_count = str_count(peptide, "C")) %>%
+      dplyr::count(cysteine_count) %>%
+      ggplot(aes(x = cysteine_count, y = n)) +
+      geom_bar(
+        stat = "identity",
+        position = "dodge",
+        show.legend = FALSE,
+        fill = input$plot_color,
+        color = "black"
+      ) +
+      geom_text(aes(label = n), vjust = -0.5, size = 5) +
+      labs(x = "Cysteine counts in peptides", y = "Cys count")
+  })
+
+  output$plot21 <- renderPlot({
+    rt_loss_analysis()[["plots"]][["rt_shift_boxplot"]]
+  })
+
+  output$plot22 <- renderPlot({
+    rt_loss_analysis()[["plots"]][["shift_vs_variability"]]
+  })
+
+  output$plot23 <- renderPlot({
+    rt_loss_analysis()[["plots"]][["shift_vs_intensity"]]
+  })
+
+  output$plot24 <- renderPlot({
+    rt_loss_analysis()[["plots"]][["classification_summary"]]
+  })
+
   # Download handler for all PSM plots
   output$download_all_plots <- downloadHandler(
     filename = function() {
@@ -1097,28 +1475,7 @@ server <- function(input, output, session) {
             ),
             residue = factor(
               residue,
-              c(
-                "A",
-                "C",
-                "D",
-                "E",
-                "F",
-                "G",
-                "H",
-                "I",
-                "K",
-                "L",
-                "M",
-                "N",
-                "P",
-                "Q",
-                "R",
-                "S",
-                "T",
-                "V",
-                "W",
-                "Y"
-              )
+              c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y")
             )
           ) %>%
           ggplot(aes(x = position, y = residue, fill = frequency)) +
@@ -1155,16 +1512,7 @@ server <- function(input, output, session) {
           geom_vline(xintercept = 4.5, color = "black", linetype = "dashed") +
           scale_x_continuous(
             breaks = c(1, 2, 3, 4, 5, 6, 7, 8),
-            labels = c(
-              "1" = "P4",
-              "2" = "P3",
-              "3" = "P2",
-              "4" = "P1",
-              "5" = "P1'",
-              "6" = "P2'",
-              "7" = "P3'",
-              "8" = "P4'"
-            )
+            labels = c("1" = "P4", "2" = "P3", "3" = "P2", "4" = "P1", "5" = "P1'", "6" = "P2'", "7" = "P3'", "8" = "P4'")
           ) +
           labs(
             title = "SeqLogo of the N-termini fingerprint",
@@ -1193,16 +1541,7 @@ server <- function(input, output, session) {
           geom_vline(xintercept = 4.5, color = "black", linetype = "dashed") +
           scale_x_continuous(
             breaks = c(1, 2, 3, 4, 5, 6, 7, 8),
-            labels = c(
-              "1" = "P4",
-              "2" = "P3",
-              "3" = "P2",
-              "4" = "P1",
-              "5" = "P1'",
-              "6" = "P2'",
-              "7" = "P3'",
-              "8" = "P4'"
-            )
+            labels = c("1" = "P4", "2" = "P3", "3" = "P2", "4" = "P1", "5" = "P1'", "6" = "P2'", "7" = "P3'", "8" = "P4'")
           ) +
           labs(
             title = "SeqLogo of the C-termini fingerprint",
@@ -1483,6 +1822,49 @@ server <- function(input, output, session) {
           theme(axis.text.x = element_text(angle = 90))
       }
 
+      # Plot 19 - Co-occurrence heatmap
+      plots_to_save[["plot19_cooccurrence_heatmap.png"]] <- function() {
+        cooccurrence_data()[["plot"]]
+      }
+
+      # Plot 20 - Cysteine counts
+      plots_to_save[["plot20_cysteine_counts.png"]] <- function() {
+        data() %>%
+          as.data.frame() %>%
+          dplyr::mutate(cysteine_count = str_count(peptide, "C")) %>%
+          dplyr::count(cysteine_count) %>%
+          ggplot(aes(x = cysteine_count, y = n)) +
+          geom_bar(
+            stat = "identity",
+            position = "dodge",
+            show.legend = FALSE,
+            fill = input$plot_color,
+            color = "black"
+          ) +
+          geom_text(aes(label = n), vjust = -0.5, size = 5) +
+          labs(x = "Cysteine counts in peptides", y = "Cys count")
+      }
+
+      # Plot 21 - RT shift boxplot
+      plots_to_save[["plot21_rt_shift_boxplot.png"]] <- function() {
+        rt_loss_analysis()[["plots"]][["rt_shift_boxplot"]]
+      }
+
+      # Plot 22 - Shift vs variability
+      plots_to_save[["plot22_shift_vs_variability.png"]] <- function() {
+        rt_loss_analysis()[["plots"]][["shift_vs_variability"]]
+      }
+
+      # Plot 23 - Shift vs intensity
+      plots_to_save[["plot23_shift_vs_intensity.png"]] <- function() {
+        rt_loss_analysis()[["plots"]][["shift_vs_intensity"]]
+      }
+
+      # Plot 24 - Classification summary
+      plots_to_save[["plot24_classification_summary.png"]] <- function() {
+        rt_loss_analysis()[["plots"]][["classification_summary"]]
+      }
+
       # Save all plots as PNG files with high resolution (300 DPI)
       file_paths <- c()
       for (plot_name in names(plots_to_save)) {
@@ -1521,7 +1903,7 @@ server <- function(input, output, session) {
   })
 
   # Render plots for the protein viewer
-  output$plot19 <- renderPlot({
+  output$plot01p <- renderPlot({
     protein_data() %>%
       as.data.frame() %>%
       ggplot() +
@@ -1533,7 +1915,7 @@ server <- function(input, output, session) {
       labs(x = "Protein coverage (%)", y = "Count")
   })
 
-  output$plot20 <- renderPlot({
+  output$plot02p <- renderPlot({
     protein_data() %>%
       as.data.frame() %>%
       dplyr::count(organism) %>%
@@ -1553,7 +1935,7 @@ server <- function(input, output, session) {
       theme(axis.text.y = element_text(face = "italic"))
   })
 
-  output$plot21 <- renderPlot({
+  output$plot03p <- renderPlot({
     protein_data() %>%
       as.data.frame() %>%
       dplyr::mutate(
@@ -1588,7 +1970,7 @@ server <- function(input, output, session) {
       labs(y = NULL, x = "Count", fill = NULL)
   })
 
-  output$plot22 <- renderPlot({
+  output$plot04p <- renderPlot({
     protein_data() %>%
       as.data.frame() %>%
       ggplot() +
@@ -1600,7 +1982,7 @@ server <- function(input, output, session) {
       labs(x = "Protein Probability", y = "Count")
   })
 
-  output$plot23 <- renderPlot({
+  output$plot05p <- renderPlot({
     protein_data() %>%
       as.data.frame() %>%
       ggplot() +
@@ -1616,7 +1998,7 @@ server <- function(input, output, session) {
       )
   })
 
-  output$plot24 <- renderPlot({
+  output$plot06p <- renderPlot({
     protein_data() %>%
       as.data.frame() %>%
       ggplot() +
@@ -1628,7 +2010,7 @@ server <- function(input, output, session) {
       labs(x = "Total peptides mapped to proteins", y = "Count")
   })
 
-  output$plot25 <- renderPlot({
+  output$plot07p <- renderPlot({
     protein_data() %>%
       as.data.frame() %>%
       ggplot() +
@@ -1644,7 +2026,7 @@ server <- function(input, output, session) {
       )
   })
 
-  output$plot26 <- renderPlot({
+  output$plot08p <- renderPlot({
     protein_data() %>%
       as.data.frame() %>%
       ggplot() +
@@ -1660,7 +2042,7 @@ server <- function(input, output, session) {
       )
   })
 
-  output$plot27 <- renderPlot({
+  output$plot09p <- renderPlot({
     protein_data() %>%
       as.data.frame() %>%
       dplyr::arrange(desc(razor_intensity)) %>%
@@ -1675,7 +2057,10 @@ server <- function(input, output, session) {
         color = "black",
         stat = "identity"
       ) +
-      labs(x = "log2 of Razor Intensity", y = "Protein")
+      labs(x = "log<sub>2</sub> of Razor Intensity", y = "Protein") +
+      theme(
+        axis.text = element_markdown()
+      )
   })
 
   # Import and pre-process the uploaded combined_protein.tsv file
@@ -1699,7 +2084,7 @@ server <- function(input, output, session) {
     updateSelectInput(session, "ycol", choices = colnames)
   })
 
-  output$plot28 <- renderPlot({
+  output$plot10p <- renderPlot({
     combined_protein_data() %>%
       as.data.frame() %>%
       rownames_to_column(var = "protein_id") %>%
@@ -1727,7 +2112,7 @@ server <- function(input, output, session) {
       theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   })
 
-  output$plot29 <- renderPlotly({
+  output$plot11p <- renderPlotly({
     combined_protein_data() %>%
       as.data.frame() %>%
       ggplot(aes(x = !!sym(input$xcol), y = !!sym(input$ycol))) +
