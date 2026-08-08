@@ -55,6 +55,10 @@ library(colourpicker) # from CRAN
 # Increase the maximum file size to 1000 MB
 options(shiny.maxRequestSize = 1000 * 1024^2)
 
+<<<<<<< HEAD
+=======
+# set the general theme for the plots
+>>>>>>> 947a9d6 (Sync files)
 theme_set(theme_bw())
 theme_update(
   text = element_text(color = "black", size = 12),
@@ -103,14 +107,22 @@ GRAVY <- function(sequence) {
     Y = -1.3,
     V = 4.2
   )
+<<<<<<< HEAD
   # Calculate the GRAVY index for the peptide sequences
+=======
+  # Calculate the GRAVY index for the peptide sequence
+>>>>>>> 947a9d6 (Sync files)
   scores <- sapply(strsplit(sequence, NULL)[[1]], function(aa) {
     hydropathy_index[aa]
   })
   return(mean(scores, na.rm = TRUE))
 }
 
+<<<<<<< HEAD
 # Calculate the isoelectric point (pI) of peptide sequences
+=======
+# Calculate the isoelectric point (pI) of a peptide sequence
+>>>>>>> 947a9d6 (Sync files)
 calculate_pI <- function(sequence) {
   # Define the pKa values for the amino acids
   pKa_values <- c(
@@ -148,8 +160,17 @@ calculate_pI <- function(sequence) {
 # Calculate the Margalef’s index
 # Margalef R. Information theory in ecology. General Systems 3. 1958;36-71.
 calculate_margalef <- function(data) {
+<<<<<<< HEAD
   S <- length(unique(data$peptide))
   N <- nrow(data)
+=======
+  # Count unique peptide sequences
+  S <- length(unique(data$peptide))
+  
+  # Total number of PSMs
+  N <- nrow(data)
+  
+>>>>>>> 947a9d6 (Sync files)
   # Calculate Margalef's index: (S - 1) / ln(N)
   if (N > 1) {
     margalef_index <- (S - 1) / log(N)
@@ -160,6 +181,10 @@ calculate_margalef <- function(data) {
   return(margalef_index)
 }
 
+<<<<<<< HEAD
+=======
+# User Interface for reading multiple psm.tsv files
+>>>>>>> 947a9d6 (Sync files)
 ui <- dashboardPage(
   dashboardHeader(
     title = "PSM Analyst for FragPipe",
@@ -174,6 +199,10 @@ ui <- dashboardPage(
     )
   ),
 
+<<<<<<< HEAD
+=======
+  # Left sidebar structure
+>>>>>>> 947a9d6 (Sync files)
   dashboardSidebar(
     sidebarMenu(
       menuItem(
@@ -496,28 +525,51 @@ ui <- dashboardPage(
   )
 )
 
+<<<<<<< HEAD
 server <- function(input, output, session) {
   multiple_psm_data <- eventReactive(input$load_psm_files, {
     req(input$data_directory)
+=======
+# Define server logic required to read the psm.tsv file and generate the plots
+server <- function(input, output, session) {
+  # Reactive to store multiple PSM files
+  multiple_psm_data <- eventReactive(input$load_psm_files, {
+    req(input$data_directory)
+
+    # Validate directory exists
+>>>>>>> 947a9d6 (Sync files)
     if (!dir.exists(input$data_directory)) {
       showNotification("Directory does not exist!", type = "error")
       return(NULL)
     }
 
+<<<<<<< HEAD
+=======
+    # Find all psm.tsv files recursively
+>>>>>>> 947a9d6 (Sync files)
     psm_files <- list.files(
       path = input$data_directory,
       pattern = "^psm\\.tsv$",
       recursive = TRUE,
       full.names = TRUE
     )
+<<<<<<< HEAD
+=======
+
+>>>>>>> 947a9d6 (Sync files)
     if (length(psm_files) == 0) {
       showNotification("No psm.tsv files found!", type = "warning")
       return(NULL)
     }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 947a9d6 (Sync files)
     showNotification(
       paste("Found", length(psm_files), "PSM files"),
       type = "message"
     )
+<<<<<<< HEAD
     all_data <- NULL
     for (file_path in psm_files) {
       tryCatch(
@@ -526,6 +578,28 @@ server <- function(input, output, session) {
           psm_data <- readr::read_tsv(file_path, show_col_types = FALSE)
           psm_data <- janitor::clean_names(psm_data)
           psm_data$source_folder <- subfolder_name
+=======
+
+    # Load and combine all PSM files
+    all_data <- NULL
+
+    for (file_path in psm_files) {
+      tryCatch(
+        {
+          # Extract subfolder name (immediate parent directory)
+          subfolder_name <- basename(dirname(file_path))
+
+          # Read the file
+          psm_data <- readr::read_tsv(file_path, show_col_types = FALSE)
+
+          # Clean names
+          psm_data <- janitor::clean_names(psm_data)
+
+          # Add source folder column
+          psm_data$source_folder <- subfolder_name
+
+          # Combine with existing data
+>>>>>>> 947a9d6 (Sync files)
           if (is.null(all_data)) {
             all_data <- psm_data
           } else {
@@ -543,7 +617,12 @@ server <- function(input, output, session) {
 
     return(all_data)
   })
+<<<<<<< HEAD
   
+=======
+
+  # Status output for multiple files
+>>>>>>> 947a9d6 (Sync files)
   output$psm_files_status <- renderText({
     if (input$load_psm_files == 0) {
       return("Click 'Load PSM Files' to search for files")
@@ -566,14 +645,27 @@ server <- function(input, output, session) {
     }
   })
 
+<<<<<<< HEAD
   data <- reactive({
     psm_file <- NULL
+=======
+  # main data reactive
+  data <- reactive({
+    psm_file <- NULL
+
+    # Try multiple files first
+>>>>>>> 947a9d6 (Sync files)
     if (input$load_psm_files > 0) {
       multi_data <- multiple_psm_data()
       if (!is.null(multi_data)) {
         psm_file <- multi_data
       }
     }
+<<<<<<< HEAD
+=======
+
+    # Fall back to single file upload
+>>>>>>> 947a9d6 (Sync files)
     if (is.null(psm_file) && !is.null(input$psm)) {
       psm_file <- readr::read_tsv(
         input$psm$datapath,
@@ -582,14 +674,29 @@ server <- function(input, output, session) {
         janitor::clean_names() %>%
         mutate(source_folder = "single_upload")
     }
+<<<<<<< HEAD
     if (is.null(psm_file)) {
       return(NULL)
     }
     
+=======
+
+    # Return NULL if no data
+    if (is.null(psm_file)) {
+      return(NULL)
+    }
+
+    # Apply filters
+>>>>>>> 947a9d6 (Sync files)
     psm_file <- psm_file %>%
       dplyr::filter(
         hyperscore >= input$hyperscore & probability >= input$probability
       )
+<<<<<<< HEAD
+=======
+
+    # Apply organism filter if provided
+>>>>>>> 947a9d6 (Sync files)
     if (input$protein_pattern != "") {
       if (input$case_sensitive) {
         psm_file <- psm_file %>%
@@ -608,6 +715,10 @@ server <- function(input, output, session) {
       }
     }
 
+<<<<<<< HEAD
+=======
+    # PSM data processing
+>>>>>>> 947a9d6 (Sync files)
     psm_file <- psm_file %>%
       dplyr::mutate(
         fingerprint_Nterm = case_when(
@@ -645,6 +756,10 @@ server <- function(input, output, session) {
       input$probability
     )
 
+<<<<<<< HEAD
+=======
+    # Add folder information if available
+>>>>>>> 947a9d6 (Sync files)
     if (!is.null(data()) && "source_folder" %in% colnames(data())) {
       n_folders <- length(unique(data()$source_folder))
       if (n_folders > 1) {
@@ -652,6 +767,10 @@ server <- function(input, output, session) {
       }
     }
 
+<<<<<<< HEAD
+=======
+    # Add protein pattern info if provided
+>>>>>>> 947a9d6 (Sync files)
     if (!is.null(input$protein_pattern) && input$protein_pattern != "") {
       pattern_text <- if (input$case_sensitive) {
         paste(
@@ -677,6 +796,12 @@ server <- function(input, output, session) {
     )
   })
 
+<<<<<<< HEAD
+=======
+  # Rendering plots for the PSM viewer
+  
+  # Render plot for the ion cloud
+>>>>>>> 947a9d6 (Sync files)
   output$plot1 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -703,6 +828,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plot for mass error accuracy in ppm
+>>>>>>> 947a9d6 (Sync files)
   output$plot2 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -728,6 +857,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plot for peptide length distribution
+>>>>>>> 947a9d6 (Sync files)
   output$plot3 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -743,6 +876,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plot for charge state distribution
+>>>>>>> 947a9d6 (Sync files)
   output$plot4 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -758,6 +895,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plot for number of missed cleavages
+>>>>>>> 947a9d6 (Sync files)
   output$plot5 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -785,6 +926,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plot for uniqueness of peptides
+>>>>>>> 947a9d6 (Sync files)
   output$plot6 <- renderPlot({
     data() %>%
       dplyr::group_by(source_folder, is_unique) %>%
@@ -815,6 +960,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plot for hyerscore distribution
+>>>>>>> 947a9d6 (Sync files)
   output$plot7 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -838,6 +987,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plot for nextscore distribution
+>>>>>>> 947a9d6 (Sync files)
   output$plot8 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -861,6 +1014,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plot for PeptideProphet probability distribution
+>>>>>>> 947a9d6 (Sync files)
   output$plot9 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -884,6 +1041,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plot for expectation value distribution
+>>>>>>> 947a9d6 (Sync files)
   output$plot10 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -907,6 +1068,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plot for assigned modifications
+>>>>>>> 947a9d6 (Sync files)
   output$plot11 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -941,6 +1106,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plot for top 20 proteins with the most PSMs
+>>>>>>> 947a9d6 (Sync files)
   output$plot12 <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -966,8 +1135,15 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
   output$plot13 <- renderPlot({
     req(data())
+=======
+  # count the number of PSMs by source folder
+  output$plot13 <- renderPlot({
+    req(data())
+    # Check if source_folder column exists
+>>>>>>> 947a9d6 (Sync files)
     if ("source_folder" %in% colnames(data())) {
       data() %>%
         count(source_folder, sort = TRUE) %>%
@@ -990,6 +1166,10 @@ server <- function(input, output, session) {
     }
   })
 
+<<<<<<< HEAD
+=======
+  # GRAVY (Grand Average of Hydropathy)
+>>>>>>> 947a9d6 (Sync files)
   output$plot_gravy <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -1018,6 +1198,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Isoelectric point (pI)
+>>>>>>> 947a9d6 (Sync files)
   output$plot_pI <- renderPlot({
     data() %>%
       as.data.frame() %>%
@@ -1036,7 +1220,13 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
   output$plot_margalef <- renderPlot({
+=======
+  # Render plot for Margalef's index
+  output$plot_margalef <- renderPlot({
+  # Calculate Margalef's index by source folder
+>>>>>>> 947a9d6 (Sync files)
     margalef_data <- data() %>%
       as.data.frame() %>%
       dplyr::group_by(source_folder) %>%
@@ -1047,6 +1237,10 @@ server <- function(input, output, session) {
         .groups = "drop"
       )
   
+<<<<<<< HEAD
+=======
+  # render the plot
+>>>>>>> 947a9d6 (Sync files)
   margalef_data %>%
     ggplot(aes(x = source_folder, y = margalef_index)) +
     geom_col(fill = input$plot_color, color = "black") +
@@ -1071,12 +1265,27 @@ server <- function(input, output, session) {
     )
   })
 
+<<<<<<< HEAD
   multiple_protein_data <- eventReactive(input$load_protein_files, {
     req(input$protein_data_directory)
+=======
+  # Import and pre-process the uploaded protein.tsv files
+
+  # Reactive to store multiple PSM files
+  multiple_protein_data <- eventReactive(input$load_protein_files, {
+    req(input$protein_data_directory)
+
+    # Validate directory exists
+>>>>>>> 947a9d6 (Sync files)
     if (!dir.exists(input$protein_data_directory)) {
       showNotification("Directory does not exist!", type = "error")
       return(NULL)
     }
+<<<<<<< HEAD
+=======
+
+    # Find all protein.tsv files recursively
+>>>>>>> 947a9d6 (Sync files)
     protein_files <- list.files(
       path = input$protein_data_directory,
       pattern = "^protein\\.tsv$",
@@ -1093,15 +1302,36 @@ server <- function(input, output, session) {
       paste("Found", length(protein_files), "protein files"),
       type = "message"
     )
+<<<<<<< HEAD
+=======
+
+    # Load and combine all PSM files
+>>>>>>> 947a9d6 (Sync files)
     all_data <- NULL
 
     for (file_path in protein_files) {
       tryCatch(
         {
+<<<<<<< HEAD
           subfolder_name <- basename(dirname(file_path))
           protein_data <- readr::read_tsv(file_path, show_col_types = FALSE)
           protein_data <- janitor::clean_names(protein_data)
           protein_data$source_folder <- subfolder_name
+=======
+          # Extract subfolder name (immediate parent directory)
+          subfolder_name <- basename(dirname(file_path))
+
+          # Read the file
+          protein_data <- readr::read_tsv(file_path, show_col_types = FALSE)
+
+          # Clean names
+          protein_data <- janitor::clean_names(protein_data)
+
+          # Add source folder column
+          protein_data$source_folder <- subfolder_name
+
+          # Combine with existing data
+>>>>>>> 947a9d6 (Sync files)
           if (is.null(all_data)) {
             all_data <- protein_data
           } else {
@@ -1119,6 +1349,11 @@ server <- function(input, output, session) {
 
     return(all_data)
   })
+<<<<<<< HEAD
+=======
+
+  # Status output for multiple files
+>>>>>>> 947a9d6 (Sync files)
   output$protein_files_status <- renderText({
     if (input$load_protein_files == 0) {
       return("Click 'Load protein Files' to search for files")
@@ -1140,14 +1375,28 @@ server <- function(input, output, session) {
       "No protein files loaded"
     }
   })
+<<<<<<< HEAD
   data_protein <- reactive({
     protein_file <- NULL
+=======
+
+  # main data reactive
+  data_protein <- reactive({
+    protein_file <- NULL
+
+    # Try multiple files first
+>>>>>>> 947a9d6 (Sync files)
     if (input$load_protein_files > 0) {
       multi_data <- multiple_protein_data()
       if (!is.null(multi_data)) {
         protein_file <- multi_data
       }
     }
+<<<<<<< HEAD
+=======
+
+    # Fall back to single file upload
+>>>>>>> 947a9d6 (Sync files)
     if (is.null(protein_file) && !is.null(input$protein)) {
       protein_file <- readr::read_tsv(
         input$protein$datapath,
@@ -1156,6 +1405,11 @@ server <- function(input, output, session) {
         janitor::clean_names() %>%
         mutate(source_folder = "single_upload")
     }
+<<<<<<< HEAD
+=======
+
+    # Return NULL if no data
+>>>>>>> 947a9d6 (Sync files)
     if (is.null(protein_file)) {
       return(NULL)
     }
@@ -1163,6 +1417,10 @@ server <- function(input, output, session) {
     return(protein_file)
   })
 
+<<<<<<< HEAD
+=======
+  # Information box to display the hyperscore filter
+>>>>>>> 947a9d6 (Sync files)
   output$info_box2 <- renderInfoBox({
     infoBox(
       "protein.tsv files contain FDR-filtered protein results, where each row is an identified protein group",
@@ -1171,6 +1429,11 @@ server <- function(input, output, session) {
     )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plots for the protein viewer
+  # Render plot for protein coverage
+>>>>>>> 947a9d6 (Sync files)
   output$plot14 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1184,6 +1447,10 @@ server <- function(input, output, session) {
       facet_wrap(~source_folder, scales = "free_y")
   })
 
+<<<<<<< HEAD
+=======
+  # Render plot for number of proteins by organism (can be used to check the contaminants)
+>>>>>>> 947a9d6 (Sync files)
   output$plot15 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1208,6 +1475,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plot for protein existence evidence annotation
+>>>>>>> 947a9d6 (Sync files)
   output$plot16 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1247,6 +1518,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plots for ProteinProphet probability
+>>>>>>> 947a9d6 (Sync files)
   output$plot17 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1263,6 +1538,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plots for the best peptide probability of supporting peptides
+>>>>>>> 947a9d6 (Sync files)
   output$plot18 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1283,6 +1562,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plots for total peptides mapped to proteins
+>>>>>>> 947a9d6 (Sync files)
   output$plot19 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1299,6 +1582,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plots for razor spectral count
+>>>>>>> 947a9d6 (Sync files)
   output$plot20 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1319,6 +1606,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plots for razor intensity
+>>>>>>> 947a9d6 (Sync files)
   output$plot21 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1339,6 +1630,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Render plots for top 20 proteins with higher razor intensity
+>>>>>>> 947a9d6 (Sync files)
   output$plot22 <- renderPlot({
     data_protein() %>%
       as.data.frame() %>%
@@ -1361,6 +1656,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # Import and pre-process the uploaded combined_protein.tsv file
+>>>>>>> 947a9d6 (Sync files)
   combined_protein_data <- reactive({
     req(input$combined_protein)
     combined_protein_file <- readr::read_tsv(
@@ -1373,6 +1672,10 @@ server <- function(input, output, session) {
       log2()
   })
 
+<<<<<<< HEAD
+=======
+  # Observe the uploaded file and update selectInput choices
+>>>>>>> 947a9d6 (Sync files)
   observe({
     req(combined_protein_data())
     colnames <- colnames(combined_protein_data())
@@ -1380,6 +1683,11 @@ server <- function(input, output, session) {
     updateSelectInput(session, "ycol", choices = colnames)
   })
 
+<<<<<<< HEAD
+=======
+  # Render plots for the combined protein data
+  # Render plot for the distribution of MaxLFQ intensity
+>>>>>>> 947a9d6 (Sync files)
   output$plot26 <- renderPlot({
     combined_protein_data() %>%
       as.data.frame() %>%
@@ -1408,6 +1716,10 @@ server <- function(input, output, session) {
       theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   })
 
+<<<<<<< HEAD
+=======
+  # Render scatter plot for sample correlation
+>>>>>>> 947a9d6 (Sync files)
   output$plot27 <- renderPlotly({
     combined_protein_data() %>%
       as.data.frame() %>%
@@ -1420,6 +1732,10 @@ server <- function(input, output, session) {
       )
   })
 
+<<<<<<< HEAD
+=======
+  # calculate the cosine similarity in the matrix and plot the heatmap
+>>>>>>> 947a9d6 (Sync files)
   output$cosine_similarity <- renderPlot({
     combined_protein_data() %>%
       as.matrix() %>%
@@ -1443,6 +1759,10 @@ server <- function(input, output, session) {
       labs(x = NULL, y = NULL, fill = "Cosine similarity")
   })
 
+<<<<<<< HEAD
+=======
+  # calculate the euclidean distance in the matrix and plot the heatmap
+>>>>>>> 947a9d6 (Sync files)
   output$euclidean_distance <- renderPlot({
     combined_protein_data() %>%
       t() %>%
@@ -1466,6 +1786,10 @@ server <- function(input, output, session) {
       labs(x = NULL, y = NULL, fill = "Euclidean distance")
   })
 
+<<<<<<< HEAD
+=======
+  # calculate the Jaccard similarity in the matrix and plot the heatmap
+>>>>>>> 947a9d6 (Sync files)
   output$jaccard_similarity <- renderPlot({
     combined_protein_data() %>%
       t() %>%
@@ -1490,4 +1814,8 @@ server <- function(input, output, session) {
   })
 }
 
+<<<<<<< HEAD
+=======
+# Run the application
+>>>>>>> 947a9d6 (Sync files)
 shinyApp(ui, server)

@@ -1,7 +1,13 @@
+<<<<<<< HEAD
 ## The psm.tsv, protein.tsv and combined_protein.tsv files are the inputs for the PSManalyst dashboard
 ## The user can filter PSMs by the hyperscore and PeptideProphet probability, as well as by enzymatic specificity
 ## The user can remove a contaminant organism as well
 ## Chaves AFA. PSManalyst: A Dashboard for Visual Quality Control of FragPipe Results. J Proteome Res. 2025 Sep 5;24(9):4344-4346. doi: 10.1021/acs.jproteome.5c00557. Epub 2025 Aug 15. PMID: 40815682.
+=======
+# Chaves AFA. PSManalyst: A Dashboard for Visual Quality Control of FragPipe Results.
+# J Proteome Res. 2025 Sep 5;24(9):4344-4346.
+# doi: 10.1021/acs.jproteome.5c00557. Epub 2025 Aug 15. PMID: 40815682.
+>>>>>>> 947a9d6 (Sync files)
 
 CRAN_packages <- c(
   "shiny",
@@ -19,7 +25,12 @@ CRAN_packages <- c(
   "R6",
   "gridExtra",
   "BiocManager",
+<<<<<<< HEAD
   "GGally"
+=======
+  "GGally",
+  "MASS"
+>>>>>>> 947a9d6 (Sync files)
 )
 not_installed_CRAN <- CRAN_packages[
   !(CRAN_packages %in% installed.packages()[, "Package"])
@@ -190,6 +201,7 @@ GRAVY <- function(sequence) {
   return(mean(scores, na.rm = TRUE))
 }
 
+<<<<<<< HEAD
 calculate_pI <- function(sequence) {
   pKa_values <- c(
     A = 2.34,
@@ -220,6 +232,188 @@ calculate_pI <- function(sequence) {
   )
 
   return(pI)
+=======
+# Isoelectric point: pH at which the Henderson-Hasselbalch net charge is zero.
+# Vectorized; solved by grid scan for the sign change followed by bisection.
+calculate_pI <- function(sequence) {
+  seqs <- toupper(as.character(sequence))
+  n <- length(seqs)
+  if (n == 0) {
+    return(numeric(0))
+  }
+
+  pk_nterm <- 9.69
+  pk_cterm <- 2.34
+  pk_acid <- c(D = 3.86, E = 4.25, C = 8.33, Y = 10.07) # HA -> A- + H+
+  pk_base <- c(H = 6.00, K = 9.74, R = 12.48) # BH+ -> B + H+
+
+  count_res <- function(letter) {
+    nchar(gsub(paste0("[^", letter, "]"), "", seqs))
+  }
+
+  acid_counts <- vapply(names(pk_acid), count_res, numeric(n))
+  base_counts <- vapply(names(pk_base), count_res, numeric(n))
+  if (n == 1) {
+    dim(acid_counts) <- c(1, length(pk_acid))
+    dim(base_counts) <- c(1, length(pk_base))
+  }
+
+  n_standard <- nchar(gsub("[^ACDEFGHIKLMNPQRSTVWY]", "", seqs))
+  valid <- n_standard > 0 & !is.na(seqs)
+
+  net_charge <- function(pH) {
+    pos <- 1 /
+      (1 + 10^(pH - pk_nterm)) +
+      as.vector(base_counts %*% (1 / (1 + 10^(pH - pk_base))))
+    neg <- 1 /
+      (1 + 10^(pk_cterm - pH)) +
+      as.vector(acid_counts %*% (1 / (1 + 10^(pk_acid - pH))))
+    pos - neg
+  }
+
+  grid <- seq(0, 14, by = 0.1)
+  charges <- vapply(grid, net_charge, numeric(n))
+  if (n == 1) {
+    dim(charges) <- c(1, length(grid))
+  }
+
+  sign_change <- charges[, -1, drop = FALSE] *
+    charges[, -ncol(charges), drop = FALSE] <=
+    0
+  first_cross <- apply(sign_change, 1, function(x) which(x)[1])
+  pI <- numeric(n)
+  no_cross <- is.na(first_cross)
+  if (any(no_cross)) {
+    pI[no_cross] <- grid[apply(
+      abs(charges[no_cross, , drop = FALSE]),
+      1,
+      which.min
+    )]
+  }
+
+  has_cross <- !no_cross
+  if (any(has_cross)) {
+    lo <- grid[first_cross[has_cross]]
+    hi <- grid[first_cross[has_cross] + 1]
+    ac <- acid_counts[has_cross, , drop = FALSE]
+    bc <- base_counts[has_cross, , drop = FALSE]
+    nc_sub <- function(pH) {
+      pos <- 1 /
+        (1 + 10^(pH - pk_nterm)) +
+        rowSums(bc * (1 / (1 + 10^(outer(pH, pk_base, "-")))))
+      neg <- 1 /
+        (1 + 10^(pk_cterm - pH)) +
+        rowSums(ac * (1 / (1 + 10^(-outer(pH, pk_acid, "-")))))
+      pos - neg
+    }
+    for (i in seq_len(60)) {
+      mid <- (lo + hi) / 2
+      c_mid <- nc_sub(mid)
+      lo <- ifelse(c_mid > 0, mid, lo)
+      hi <- ifelse(c_mid > 0, hi, mid)
+    }
+    pI[has_cross] <- (lo + hi) / 2
+  }
+
+  pI[!valid] <- NA_real_
+  pI
+}
+
+point_density_2d <- function(x, y, n = 100) {
+  out <- rep(NA_real_, length(x))
+  ok <- is.finite(x) & is.finite(y)
+  if (
+    sum(ok) < 3 ||
+      length(unique(x[ok])) < 2 ||
+      length(unique(y[ok])) < 2 ||
+      !requireNamespace("MASS", quietly = TRUE)
+  ) {
+    out[ok] <- 1
+    return(out)
+  }
+  dens <- MASS::kde2d(x[ok], y[ok], n = n)
+  ix <- findInterval(x[ok], dens$x, all.inside = TRUE)
+  iy <- findInterval(y[ok], dens$y, all.inside = TRUE)
+  out[ok] <- dens$z[cbind(ix, iy)]
+  out
+}
+
+plot_2d_gel <- function(
+  d,
+  pi_col = "isoelectric_point",
+  mw_col = "molecular_weight",
+  title = "Virtual 2D gel (pI vs MW)",
+  mw_lab = "Monoisotopic peptide mass (Da)",
+  density_trans = "log10",
+  facet_col = NULL,
+  ncol = 3
+) {
+  d <- d[is.finite(d[[pi_col]]) & is.finite(d[[mw_col]]), , drop = FALSE]
+  if (nrow(d) == 0) {
+    return(
+      ggplot2::ggplot() +
+        ggplot2::annotate(
+          "text",
+          x = 0.5,
+          y = 0.5,
+          label = "No pI / MW data available"
+        ) +
+        ggplot2::theme_void()
+    )
+  }
+  faceted <- !is.null(facet_col) && facet_col %in% names(d)
+  if (faceted) {
+    d$.density <- stats::ave(
+      seq_len(nrow(d)),
+      d[[facet_col]],
+      FUN = function(i) point_density_2d(d[[pi_col]][i], d[[mw_col]][i])
+    )
+  } else {
+    d$.density <- point_density_2d(d[[pi_col]], d[[mw_col]])
+  }
+  p <- ggplot2::ggplot(
+    d,
+    ggplot2::aes(
+      x = .data[[pi_col]],
+      y = .data[[mw_col]],
+      color = .data[[".density"]]
+    )
+  ) +
+    ggplot2::geom_point(size = 1.5, alpha = 0.8) +
+    # Density spans several orders of magnitude; a linear ramp collapses all
+    # but the densest lobes into the dark end of the scale
+    ggplot2::scale_color_viridis_c(
+      name = "Spot density",
+      option = "D",
+      transform = density_trans,
+      labels = scales::label_log()
+    ) +
+    ggplot2::labs(
+      title = title,
+      x = "Isoelectric point (pI)",
+      y = mw_lab
+    ) +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(
+      strip.background = element_blank(),
+      strip.text = element_text(face = "bold", color = "black"),
+      plot.title = element_text(size = 11, hjust = 0.5, face = "bold"),
+      axis.text = element_text(face = "bold", color = "black"),
+      axis.title = element_text(size = 10, face = "bold"),
+      legend.title = element_text(size = 9, face = "bold", hjust = 0.5),
+      legend.title.position = "top",
+      legend.text = element_text(size = 9, face = "bold"),
+      legend.key.height = unit(0.25, "cm"),
+      legend.key.width = unit(1, "cm"),
+      legend.position = "bottom",
+      panel.border = element_rect(color = "black", fill = NA),
+      panel.grid = element_blank()
+    )
+  if (faceted) {
+    p <- p + ggplot2::facet_wrap(stats::reformulate(facet_col), ncol = ncol)
+  }
+  p
+>>>>>>> 947a9d6 (Sync files)
 }
 
 color_blue_seq <- c(
@@ -234,9 +428,16 @@ color_blue_seq <- c(
 
 # Function to calculate amino acid co-occurrence matrix
 analyze_terminus_cooccurrence <- function(
+<<<<<<< HEAD
     df,
     peptide_col,
     show_values = FALSE) {
+=======
+  df,
+  peptide_col,
+  show_values = FALSE
+) {
+>>>>>>> 947a9d6 (Sync files)
   amino_acids <- c(
     "A",
     "C",
@@ -359,10 +560,18 @@ analyze_terminus_cooccurrence <- function(
 }
 
 analyze_modification_type <- function(
+<<<<<<< HEAD
     data,
     rt_threshold_insource = 0.5,
     rt_threshold_real = 1.5,
     min_observations = 3) {
+=======
+  data,
+  rt_threshold_insource = 0.5,
+  rt_threshold_real = 1.5,
+  min_observations = 3
+) {
+>>>>>>> 947a9d6 (Sync files)
   mod_patterns <- list(
     H2O_loss = "-18\\.0106",
     NH3_loss = "-17\\.0265",
@@ -547,10 +756,23 @@ ProteinCoverageVisualizer <- R6Class(
       start_pos <- 1
       while (TRUE) {
         pos <- str_locate(
+<<<<<<< HEAD
           substr(self$protein_sequence, start_pos, nchar(self$protein_sequence)),
           peptide_sequence
         )
         if (is.na(pos[1])) break
+=======
+          substr(
+            self$protein_sequence,
+            start_pos,
+            nchar(self$protein_sequence)
+          ),
+          peptide_sequence
+        )
+        if (is.na(pos[1])) {
+          break
+        }
+>>>>>>> 947a9d6 (Sync files)
         actual_start <- start_pos + pos[1] - 1
         actual_end <- start_pos + pos[2] - 1
         positions <- append(positions, list(c(actual_start, actual_end)))
@@ -609,19 +831,37 @@ ProteinCoverageVisualizer <- R6Class(
       coverage <- self$calculate_coverage_depth()
       coverage_mask <- self$create_coverage_mask()
       max_coverage <- max(coverage[coverage_mask], na.rm = TRUE)
+<<<<<<< HEAD
       if (max_coverage == 0 || is.infinite(max_coverage) || is.na(max_coverage)) {
+=======
+      if (
+        max_coverage == 0 || is.infinite(max_coverage) || is.na(max_coverage)
+      ) {
+>>>>>>> 947a9d6 (Sync files)
         max_coverage <- 1
       }
 
       n_lines <- ceiling(self$protein_length / aa_per_line)
+<<<<<<< HEAD
       if (n_lines == 0) n_lines <- 1
+=======
+      if (n_lines == 0) {
+        n_lines <- 1
+      }
+>>>>>>> 947a9d6 (Sync files)
 
       aa_data <- data.frame()
 
       for (line_idx in 1:n_lines) {
         start_pos <- (line_idx - 1) * aa_per_line + 1
         end_pos <- min(start_pos + aa_per_line - 1, self$protein_length)
+<<<<<<< HEAD
         if (start_pos > self$protein_length) break
+=======
+        if (start_pos > self$protein_length) {
+          break
+        }
+>>>>>>> 947a9d6 (Sync files)
 
         line_sequence <- substr(self$protein_sequence, start_pos, end_pos)
         line_aas <- strsplit(line_sequence, "")[[1]]
@@ -645,7 +885,13 @@ ProteinCoverageVisualizer <- R6Class(
     },
     create_peptide_data = function(aa_per_line = 50) {
       n_lines <- ceiling(self$protein_length / aa_per_line)
+<<<<<<< HEAD
       if (n_lines == 0) n_lines <- 1
+=======
+      if (n_lines == 0) {
+        n_lines <- 1
+      }
+>>>>>>> 947a9d6 (Sync files)
       peptide_plot_data <- data.frame()
       if (nrow(self$peptides_data) == 0) {
         return(peptide_plot_data)
@@ -654,7 +900,13 @@ ProteinCoverageVisualizer <- R6Class(
       for (line_idx in 1:n_lines) {
         line_start <- (line_idx - 1) * aa_per_line + 1
         line_end <- min(line_start + aa_per_line - 1, self$protein_length)
+<<<<<<< HEAD
         if (line_start > self$protein_length) break
+=======
+        if (line_start > self$protein_length) {
+          break
+        }
+>>>>>>> 947a9d6 (Sync files)
 
         line_peptides <- data.frame()
 
@@ -683,7 +935,15 @@ ProteinCoverageVisualizer <- R6Class(
               x_end = rel_end,
               start_pos = start_pos,
               end_pos = end_pos,
+<<<<<<< HEAD
               psm_count = ifelse(is.na(peptide$psm_count), 1, peptide$psm_count),
+=======
+              psm_count = ifelse(
+                is.na(peptide$psm_count),
+                1,
+                peptide$psm_count
+              ),
+>>>>>>> 947a9d6 (Sync files)
               peptide_id = i,
               peptide_seq = peptide$sequence,
               stringsAsFactors = FALSE
@@ -719,14 +979,30 @@ ProteinCoverageVisualizer <- R6Class(
       }
       return(peptide_plot_data)
     },
+<<<<<<< HEAD
     plot_coverage = function(aa_per_line = 50, show_sequence = TRUE, fill_color = "#5499c7") {
+=======
+    plot_coverage = function(
+      aa_per_line = 50,
+      show_sequence = TRUE,
+      fill_color = "#5499c7"
+    ) {
+>>>>>>> 947a9d6 (Sync files)
       aa_data <- self$create_amino_acid_data(aa_per_line)
       peptide_data <- self$create_peptide_data(aa_per_line)
 
       if (nrow(aa_data) == 0) {
+<<<<<<< HEAD
         return(ggplot() +
           theme_void() +
           annotate("text", x = 0, y = 0, label = "No sequence data available"))
+=======
+        return(
+          ggplot() +
+            theme_void() +
+            annotate("text", x = 0, y = 0, label = "No sequence data available")
+        )
+>>>>>>> 947a9d6 (Sync files)
       }
 
       n_lines <- max(aa_data$line)
@@ -754,6 +1030,7 @@ ProteinCoverageVisualizer <- R6Class(
           )
 
         if (nrow(uncovered_data) > 0) {
+<<<<<<< HEAD
           p <- p + geom_tile(data = uncovered_data, aes(x = x_pos, y = 0.5), width = 0.9, height = 0.9, fill = "lightgray", color = "black", size = 0.2, alpha = 0.7)
         }
 
@@ -764,20 +1041,97 @@ ProteinCoverageVisualizer <- R6Class(
 
         if (show_sequence) {
           p <- p + geom_text(data = line_aa_data, aes(x = x_pos, y = 0.5, label = aa), size = 4, fontface = "bold")
+=======
+          p <- p +
+            geom_tile(
+              data = uncovered_data,
+              aes(x = x_pos, y = 0.5),
+              width = 0.9,
+              height = 0.9,
+              fill = "lightgray",
+              color = "black",
+              size = 0.2,
+              alpha = 0.7
+            )
+        }
+
+        if (nrow(covered_data) > 0) {
+          p <- p +
+            geom_tile(
+              data = covered_data,
+              aes(x = x_pos, y = 0.5, fill = coverage_norm),
+              width = 0.9,
+              height = 0.9,
+              color = "black",
+              size = 0.2
+            ) +
+            scale_fill_gradient(
+              low = "#e1f5fe",
+              high = fill_color,
+              name = "Coverage (Norm)",
+              na.value = "lightgray"
+            )
+        }
+
+        if (show_sequence) {
+          p <- p +
+            geom_text(
+              data = line_aa_data,
+              aes(x = x_pos, y = 0.5, label = aa),
+              size = 4,
+              fontface = "bold"
+            )
+>>>>>>> 947a9d6 (Sync files)
         }
 
         pos_labels <- line_aa_data[line_aa_data$position %% 10 == 0, ]
         if (nrow(pos_labels) > 0) {
+<<<<<<< HEAD
           p <- p + geom_text(data = pos_labels, aes(x = x_pos, y = -0.3, label = position), size = 3, color = "black", fontface = "bold")
+=======
+          p <- p +
+            geom_text(
+              data = pos_labels,
+              aes(x = x_pos, y = -0.3, label = position),
+              size = 3,
+              color = "black",
+              fontface = "bold"
+            )
+>>>>>>> 947a9d6 (Sync files)
         }
 
         if (nrow(line_peptide_data) > 0) {
           for (j in 1:nrow(line_peptide_data)) {
             pep <- line_peptide_data[j, ]
+<<<<<<< HEAD
             p <- p + annotate("rect", xmin = pep$x_start - 0.4, xmax = pep$x_end + 0.4, ymin = pep$y_pos - 0.075, ymax = pep$y_pos + 0.075, fill = "tomato", alpha = 0.7, size = 0.3)
 
             if (!is.na(pep$psm_count) && pep$psm_count != "") {
               p <- p + annotate("text", x = (pep$x_start + pep$x_end) / 2, y = pep$y_pos, label = paste0("PSM = ", pep$psm_count), size = 3, fontface = "bold")
+=======
+            p <- p +
+              annotate(
+                "rect",
+                xmin = pep$x_start - 0.4,
+                xmax = pep$x_end + 0.4,
+                ymin = pep$y_pos - 0.075,
+                ymax = pep$y_pos + 0.075,
+                fill = "tomato",
+                alpha = 0.7,
+                size = 0.3
+              )
+
+            if (!is.na(pep$psm_count) && pep$psm_count != "") {
+              p <- p +
+                annotate(
+                  "text",
+                  x = (pep$x_start + pep$x_end) / 2,
+                  y = pep$y_pos,
+                  label = paste0("PSM = ", pep$psm_count),
+                  size = 3,
+                  fontface = "bold"
+                )
+>>>>>>> 947a9d6 (Sync files)
             }
           }
         }
@@ -789,7 +1143,14 @@ ProteinCoverageVisualizer <- R6Class(
       }
 
       combined_plot <- do.call(grid.arrange, c(plots, ncol = 1))
+<<<<<<< HEAD
       title <- textGrob(paste("Protein sequence view (length:", self$protein_length, "aa)"), gp = gpar(fontsize = 16, fontface = "bold"))
+=======
+      title <- textGrob(
+        paste("Protein sequence view (length:", self$protein_length, "aa)"),
+        gp = gpar(fontsize = 16, fontface = "bold")
+      )
+>>>>>>> 947a9d6 (Sync files)
       final_plot <- grid.arrange(title, combined_plot, heights = c(0.5, 8))
       return(final_plot)
     }
@@ -961,7 +1322,11 @@ ui <- dashboardPage(
             collapsible = TRUE
           ),
           box(
+<<<<<<< HEAD
             title = "Isoelectric Point (pI)",
+=======
+            title = "Virtual 2D gel (pI vs MW)",
+>>>>>>> 947a9d6 (Sync files)
             status = "primary",
             solidHeader = TRUE,
             plotOutput("plot09"),
@@ -1064,9 +1429,38 @@ ui <- dashboardPage(
             solidHeader = TRUE,
             width = 12,
             fluidRow(
+<<<<<<< HEAD
               column(4, selectizeInput("selected_protein", "Select Protein:", choices = NULL)),
               column(4, numericInput("aa_per_line", "Amino Acids per Line:", value = 50, min = 10, max = 200)),
               column(4, checkboxInput("show_sequence", "Show Sequence Letters", value = TRUE))
+=======
+              column(
+                4,
+                selectizeInput(
+                  "selected_protein",
+                  "Select Protein:",
+                  choices = NULL
+                )
+              ),
+              column(
+                4,
+                numericInput(
+                  "aa_per_line",
+                  "Amino Acids per Line:",
+                  value = 50,
+                  min = 10,
+                  max = 200
+                )
+              ),
+              column(
+                4,
+                checkboxInput(
+                  "show_sequence",
+                  "Show Sequence Letters",
+                  value = TRUE
+                )
+              )
+>>>>>>> 947a9d6 (Sync files)
             ),
             uiOutput("protein_coverage_plot_ui"),
             collapsible = TRUE
@@ -1245,7 +1639,14 @@ server <- function(input, output, session) {
         fingerprint_Cterm = str_remove_all(fingerprint_Cterm, "\\."),
         delta_mass_ppm = (observed_m_z - calculated_m_z) / calculated_m_z * 1e6,
         gravy = sapply(peptide, GRAVY),
+<<<<<<< HEAD
         isoelectric_point = sapply(peptide, calculate_pI),
+=======
+        isoelectric_point = calculate_pI(peptide),
+        # FragPipe monoisotopic neutral mass; includes PTM masses, unlike a
+        # sequence-composition estimate
+        molecular_weight = calculated_peptide_mass,
+>>>>>>> 947a9d6 (Sync files)
         specificity = case_when(
           prev_aa %in% c("K", "R") & str_sub(peptide, -1) %in% c("K", "R") ~
             "Fully specific",
@@ -1510,7 +1911,11 @@ server <- function(input, output, session) {
   output$plot08 <- renderPlot({
     data() %>%
       as.data.frame() %>%
+<<<<<<< HEAD
       ggplot(aes(x = gravy, fill = stat(x))) +
+=======
+      ggplot(aes(x = gravy, fill = after_stat(x))) +
+>>>>>>> 947a9d6 (Sync files)
       geom_histogram(color = "black") +
       labs(
         x = NULL,
@@ -1530,6 +1935,7 @@ server <- function(input, output, session) {
   output$plot09 <- renderPlot({
     data() %>%
       as.data.frame() %>%
+<<<<<<< HEAD
       ggplot(aes(x = isoelectric_point, fill = stat(x))) +
       geom_histogram(color = "black") +
       labs(x = NULL, y = "Count") +
@@ -1540,6 +1946,20 @@ server <- function(input, output, session) {
         legend.position = "bottom",
         legend.key.width = unit(2.5, "cm"),
         legend.key.height = unit(0.25, "cm")
+=======
+      plot_2d_gel(
+        pi_col = "isoelectric_point",
+        mw_col = "molecular_weight",
+        title = "Virtual 2D gel"
+      ) +
+      theme(
+        text = element_text(size = 15, color = "black"),
+        legend.position = "bottom",
+        legend.key.width = unit(2.5, "cm"),
+        legend.key.height = unit(0.25, "cm"),
+        panel.border = element_rect(color = "black", fill = NA),
+        panel.grid = element_blank()
+>>>>>>> 947a9d6 (Sync files)
       )
   })
 
@@ -1931,7 +2351,11 @@ server <- function(input, output, session) {
       plots_to_save[["plot08_gravy.png"]] <- function() {
         data() %>%
           as.data.frame() %>%
+<<<<<<< HEAD
           ggplot(aes(x = gravy, fill = stat(x))) +
+=======
+          ggplot(aes(x = gravy, fill = after_stat(x))) +
+>>>>>>> 947a9d6 (Sync files)
           geom_histogram(color = "black") +
           labs(
             x = NULL,
@@ -1948,6 +2372,7 @@ server <- function(input, output, session) {
           )
       }
 
+<<<<<<< HEAD
       plots_to_save[["plot09_isoelectric_point.png"]] <- function() {
         data() %>%
           as.data.frame() %>%
@@ -1958,6 +2383,18 @@ server <- function(input, output, session) {
           theme(
             text = element_text(size = 15, color = "black"),
             axis.text.x = element_text(hjust = 0.5),
+=======
+      plots_to_save[["plot09_virtual_2d_gel.png"]] <- function() {
+        data() %>%
+          as.data.frame() %>%
+          plot_2d_gel(
+            pi_col = "isoelectric_point",
+            mw_col = "molecular_weight",
+            title = "Virtual 2D gel"
+          ) +
+          theme(
+            text = element_text(size = 15, color = "black"),
+>>>>>>> 947a9d6 (Sync files)
             legend.position = "bottom",
             legend.key.width = unit(2.5, "cm"),
             legend.key.height = unit(0.25, "cm")
@@ -2243,7 +2680,11 @@ server <- function(input, output, session) {
         values = c("#5499c7", "#7fb3d5", "#a9cce3", "#d4e6f1")
       ) +
       geom_text(
+<<<<<<< HEAD
         aes(y = protein_existence, label = ..count..),
+=======
+        aes(y = protein_existence, label = after_stat(count)),
+>>>>>>> 947a9d6 (Sync files)
         show.legend = FALSE,
         stat = "count",
         vjust = -0.5,
@@ -2363,10 +2804,21 @@ server <- function(input, output, session) {
     combined_protein_data() %>%
       as.data.frame() %>%
       GGally::ggpairs(
+<<<<<<< HEAD
         lower = list(continuous = wrap("points", alpha = 0.4), combo = wrap("dot_no_facet", alpha = 0.4)),
         diag = list(continuous = "barDiag"),
         upper = list(continuous = "density", combo = "box_no_facet")
       ) + theme_bw() +
+=======
+        lower = list(
+          continuous = wrap("points", alpha = 0.4),
+          combo = wrap("dot_no_facet", alpha = 0.4)
+        ),
+        diag = list(continuous = "barDiag"),
+        upper = list(continuous = "density", combo = "box_no_facet")
+      ) +
+      theme_bw() +
+>>>>>>> 947a9d6 (Sync files)
       theme(
         strip.background = element_blank(),
         strip.text = element_text(face = "bold")
@@ -2387,7 +2839,14 @@ server <- function(input, output, session) {
         Biostrings::readAAStringSet(input$fasta_file$datapath)
       },
       error = function(e) {
+<<<<<<< HEAD
         showNotification("Error reading FASTA file. Please ensure it is a valid AA FASTA.", type = "error")
+=======
+        showNotification(
+          "Error reading FASTA file. Please ensure it is a valid AA FASTA.",
+          type = "error"
+        )
+>>>>>>> 947a9d6 (Sync files)
         return(NULL)
       }
     )
@@ -2424,11 +2883,23 @@ server <- function(input, output, session) {
     }
 
     if (is.null(input$fasta_file)) {
+<<<<<<< HEAD
       return(list(error = "Please upload a FASTA file to view protein sequence."))
     }
 
     if (is.null(input$psm)) {
       return(list(error = "Please upload a psm.tsv file in the 'PSM viewer' tab to see peptide coverage."))
+=======
+      return(list(
+        error = "Please upload a FASTA file to view protein sequence."
+      ))
+    }
+
+    if (is.null(input$psm)) {
+      return(list(
+        error = "Please upload a psm.tsv file in the 'PSM viewer' tab to see peptide coverage."
+      ))
+>>>>>>> 947a9d6 (Sync files)
     }
 
     req(data())
@@ -2444,7 +2915,17 @@ server <- function(input, output, session) {
     }
 
     if (is.na(target_idx)) {
+<<<<<<< HEAD
       return(list(error = paste("Protein", target_protein, "not found in the uploaded FASTA file. Please check the identifiers.")))
+=======
+      return(list(
+        error = paste(
+          "Protein",
+          target_protein,
+          "not found in the uploaded FASTA file. Please check the identifiers."
+        )
+      ))
+>>>>>>> 947a9d6 (Sync files)
     }
 
     protein_seq <- as.character(fasta_seqs[[target_idx]])
@@ -2457,11 +2938,27 @@ server <- function(input, output, session) {
     } else if ("protein" %in% colnames(psm_df)) {
       pep_df <- psm_df[psm_df$protein == target_protein, ]
     } else {
+<<<<<<< HEAD
       return(list(error = "No suitable protein identifier column found in PSM data."))
     }
 
     if (nrow(pep_df) == 0) {
       return(list(error = paste("No peptides found for protein", target_protein, "in PSM data.")))
+=======
+      return(list(
+        error = "No suitable protein identifier column found in PSM data."
+      ))
+    }
+
+    if (nrow(pep_df) == 0) {
+      return(list(
+        error = paste(
+          "No peptides found for protein",
+          target_protein,
+          "in PSM data."
+        )
+      ))
+>>>>>>> 947a9d6 (Sync files)
     }
 
     if ("peptide" %in% colnames(pep_df)) {
@@ -2480,8 +2977,19 @@ server <- function(input, output, session) {
       dplyr::rename(sequence = !!sym(seq_col)) %>%
       dplyr::mutate(start = NA, end = NA)
 
+<<<<<<< HEAD
     agg_peptides$sequence <- stringr::str_remove_all(agg_peptides$sequence, "\\[.*?\\]")
     agg_peptides$sequence <- stringr::str_remove_all(agg_peptides$sequence, "[^A-Z]")
+=======
+    agg_peptides$sequence <- stringr::str_remove_all(
+      agg_peptides$sequence,
+      "\\[.*?\\]"
+    )
+    agg_peptides$sequence <- stringr::str_remove_all(
+      agg_peptides$sequence,
+      "[^A-Z]"
+    )
+>>>>>>> 947a9d6 (Sync files)
 
     return(list(
       protein_sequence = protein_seq,
@@ -2492,14 +3000,27 @@ server <- function(input, output, session) {
   output$protein_coverage_plot_ui <- renderUI({
     plot_data <- coverage_plot_data()
     if (!is.null(plot_data$error)) {
+<<<<<<< HEAD
       return(div(style = "color: red; padding: 15px; font-weight: bold;", plot_data$error))
+=======
+      return(div(
+        style = "color: red; padding: 15px; font-weight: bold;",
+        plot_data$error
+      ))
+>>>>>>> 947a9d6 (Sync files)
     }
     if (is.null(plot_data$protein_sequence)) {
       return(NULL)
     }
 
     aa_per_line <- input$aa_per_line
+<<<<<<< HEAD
     if (is.na(aa_per_line) || aa_per_line < 10) aa_per_line <- 50
+=======
+    if (is.na(aa_per_line) || aa_per_line < 10) {
+      aa_per_line <- 50
+    }
+>>>>>>> 947a9d6 (Sync files)
     n_lines <- ceiling(nchar(plot_data$protein_sequence) / aa_per_line)
 
     plot_height <- max(400, n_lines * 80 + 100)
@@ -2518,7 +3039,13 @@ server <- function(input, output, session) {
     )
 
     aa_per_line <- input$aa_per_line
+<<<<<<< HEAD
     if (is.na(aa_per_line) || aa_per_line < 10) aa_per_line <- 50
+=======
+    if (is.na(aa_per_line) || aa_per_line < 10) {
+      aa_per_line <- 50
+    }
+>>>>>>> 947a9d6 (Sync files)
 
     visualizer$plot_coverage(
       aa_per_line = aa_per_line,
@@ -2552,8 +3079,15 @@ server <- function(input, output, session) {
         show.legend = FALSE
       ) +
       labs(x = NULL, y = "log<sub>2</sub>(MaxLFQ intensity)") +
+<<<<<<< HEAD
       theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
             axis.title = element_markdown())
+=======
+      theme(
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        axis.title = element_markdown()
+      )
+>>>>>>> 947a9d6 (Sync files)
   })
 
   output$plot11p <- renderPlotly({

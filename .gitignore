@@ -1,0 +1,7 @@
+# general files 
+.DS_Store
+RELEASE_NOTES_v1.0.1.md
+.Rhistory
+ProteinCoverageVisualizer.r
+PSManalyst.zip
+PSManalyst.py
